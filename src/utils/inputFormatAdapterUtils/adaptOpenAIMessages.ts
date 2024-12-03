@@ -1,22 +1,19 @@
-import { OpenAIFunctionMessage } from "llm-proxy";
 import { OpenAIMessages } from "../../types";
 
-function adaptOpenAIMessages(
-  messages: OpenAIFunctionMessage[]
-): OpenAIMessages {
-  return messages.map((msg: OpenAIFunctionMessage) => {
+function adaptOpenAIMessages(messages: OpenAIMessages) {
+  return messages.map((msg) => {
     if (msg.role === "function") {
       return {
         role: msg.role,
         content: msg.content ?? "",
-        name: (msg as OpenAIFunctionMessage).name,
+        name: msg.name,
       };
     }
     return {
       role: msg.role,
       content: msg.content ?? "function call",
     };
-  }) as OpenAIMessages;
+  });
 }
 
 export default adaptOpenAIMessages;

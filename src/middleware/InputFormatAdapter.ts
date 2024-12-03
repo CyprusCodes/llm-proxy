@@ -1,3 +1,4 @@
+import { OpenAIMessages } from "llm-proxy";
 import LLM_PROXY_ERROR_MESSAGES from "../constants/errorMessages";
 import { Providers } from "../types";
 import adaptAnthropicMessages from "../utils/inputFormatAdapterUtils/adaptAnthropicMessages";
@@ -5,13 +6,9 @@ import adaptOpenAIMessages from "../utils/inputFormatAdapterUtils/adaptOpenAIMes
 
 export default class InputFormatAdapter {
   static adaptMessages(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // TODO: fix the below any type
-    messages: any,
+    messages: OpenAIMessages,
     provider: Providers
   ): {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // TODO: fix the below any type
     adaptedMessages: any;
     systemPrompt?: string;
   } {
