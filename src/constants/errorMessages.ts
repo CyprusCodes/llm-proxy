@@ -7,7 +7,7 @@ const LLM_PROXY_ERROR_MESSAGES = {
   MESSAGES_ARRAY_CANNOT_BE_EMPTY: "Messages array cannot be empty",
   RESPONSE_OBJECT_NULL_OR_UNDEFINED: "Response object is null or undefined",
   FAILED_TO_ADAPT_RESPONSE: "Failed to adapt response",
-  MISSING_MODEL: "Model is required"
+  MISSING_MODEL: "Model is required",
 };
 
 export default LLM_PROXY_ERROR_MESSAGES;

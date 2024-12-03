@@ -185,7 +185,7 @@ export enum BedrockAnthropicContentType {
   TOOL_RESULT = "tool_result",
 }
 
-export type BedrockAnthropicMessageRole = "user" | "assistant";
+export type BedrockAnthropicMessageRole = "user" | "assistant" | "system";
 
 export interface BedrockAnthropicToolUseContent {
   type: BedrockAnthropicContentType.TOOL_USE;

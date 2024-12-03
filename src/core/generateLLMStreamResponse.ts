@@ -1,4 +1,4 @@
-import { OpenAIResponse, Providers } from "llm-proxy";
+import { Messages, OpenAIResponse, Providers } from "llm-proxy";
 import InputFormatAdapter from "../middleware/InputFormatAdapter";
 import OutputFormatAdapter from "../middleware/OutputFormatAdapter";
 import ProviderFinder from "../middleware/ProviderFinder";
@@ -14,13 +14,13 @@ async function generateLLMStreamResponse(
   const provider = ProviderFinder.getProvider(model);
   const service = initializeProviderService(provider, credentials);
 
-  const { adaptedMessages, systemPrompt } = InputFormatAdapter.adaptMessages(
-    messages,
-    provider
-  );
+  const { adaptedMessages, systemPrompt } = InputFormatAdapter.adaptMessages({
+    messages: messages as Messages,
+    provider,
+  });
 
   const stream = service.generateStreamCompletion({
-    messages: adaptedMessages,
+    messages: adaptedMessages as Messages,
     model,
     max_tokens,
     temperature: temperature || 0,

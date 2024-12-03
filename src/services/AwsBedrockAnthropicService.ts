@@ -10,6 +10,7 @@ import {
 } from "../types";
 import { ClientService } from "./ClientService";
 import LLM_PROXY_ERROR_MESSAGES from "../constants/errorMessages";
+import { BedrockAnthropicMessages } from "llm-proxy";
 
 export default class AwsBedrockAnthropicService implements ClientService {
   private bedrock: BedrockRuntimeClient;
@@ -44,7 +45,7 @@ export default class AwsBedrockAnthropicService implements ClientService {
       anthropic_version: "bedrock-2023-05-31",
       max_tokens,
       temperature,
-      messages,
+      messages: messages as BedrockAnthropicMessages,
       system: systemPrompt,
       ...(tools && Array.isArray(tools) && tools.length ? { tools } : {}),
     });
@@ -81,7 +82,7 @@ export default class AwsBedrockAnthropicService implements ClientService {
       anthropic_version: "bedrock-2023-05-31",
       max_tokens,
       temperature,
-      messages,
+      messages: messages as BedrockAnthropicMessages,
       system: systemPrompt,
       ...(tools && Array.isArray(tools) && tools.length ? { tools } : {}),
     });

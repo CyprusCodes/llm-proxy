@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { OpenAIMessages, OpenAIResponse } from "../types";
+import { Messages, OpenAIMessages, OpenAIResponse } from "../types";
 import { ClientService } from "./ClientService";
 import LLM_PROXY_ERROR_MESSAGES from "../constants/errorMessages";
 
@@ -17,7 +17,7 @@ export default class OpenAIService implements ClientService {
     temperature,
     tools,
   }: {
-    messages: OpenAIMessages;
+    messages: Messages;
     model: string;
     max_tokens: number;
     temperature: number;
@@ -32,7 +32,7 @@ export default class OpenAIService implements ClientService {
     try {
       const response = await this.openai.chat.completions.create({
         model,
-        messages,
+        messages: messages as OpenAIMessages,
         max_tokens,
         temperature,
         functions: tools,
@@ -51,7 +51,7 @@ export default class OpenAIService implements ClientService {
     temperature,
     tools,
   }: {
-    messages: OpenAIMessages;
+    messages: Messages;
     model: string;
     max_tokens: number;
     temperature: number;
@@ -69,7 +69,7 @@ export default class OpenAIService implements ClientService {
     try {
       const stream = await this.openai.chat.completions.create({
         model,
-        messages,
+        messages: messages as OpenAIMessages,
         max_tokens,
         temperature,
         functions: tools,
