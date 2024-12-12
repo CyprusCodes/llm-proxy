@@ -1,15 +1,14 @@
 import {
   InvokeModelCommand,
   BedrockRuntimeClient,
-  InvokeModelWithResponseStreamCommand,
+  InvokeModelWithResponseStreamCommand
 } from "@aws-sdk/client-bedrock-runtime";
 import {
   BedrockAnthropicParsedChunk,
   BedrockAnthropicResponse,
-  Messages,
+  Messages
 } from "../types";
 import { ClientService } from "./ClientService";
-import LLM_PROXY_ERROR_MESSAGES from "../constants/errorMessages";
 
 export default class AwsBedrockAnthropicService implements ClientService {
   private bedrock: BedrockRuntimeClient;
@@ -19,8 +18,8 @@ export default class AwsBedrockAnthropicService implements ClientService {
       region,
       credentials: {
         accessKeyId: awsAccessKey,
-        secretAccessKey: awsSecretKey,
-      },
+        secretAccessKey: awsSecretKey
+      }
     });
   }
 
@@ -33,11 +32,19 @@ export default class AwsBedrockAnthropicService implements ClientService {
     tools?: any; // TODO: Define the correct type
     systemPrompt?: string;
   }): Promise<BedrockAnthropicResponse> {
-    const { messages, model, max_tokens, temperature, systemPrompt, tools } =
-      params;
+    const {
+      messages,
+      model,
+      max_tokens,
+      temperature,
+      systemPrompt,
+      tools
+    } = params;
 
     if (!model) {
-      return Promise.reject(new Error(LLM_PROXY_ERROR_MESSAGES.MISSING_MODEL));
+      return Promise.reject(
+        new Error("Model ID is required for AwsBedrockAnthropicService")
+      );
     }
 
     const body = JSON.stringify({
@@ -46,14 +53,14 @@ export default class AwsBedrockAnthropicService implements ClientService {
       temperature,
       messages,
       system: systemPrompt,
-      ...(tools && Array.isArray(tools) && tools.length ? { tools } : {}),
+      ...(tools && Array.isArray(tools) && tools.length ? { tools } : {})
     });
 
     const command = new InvokeModelCommand({
       modelId: model,
       body,
       contentType: "application/json",
-      accept: "application/json",
+      accept: "application/json"
     });
 
     const response = await this.bedrock.send(command);
@@ -70,11 +77,19 @@ export default class AwsBedrockAnthropicService implements ClientService {
     tools?: any; // TODO: Define the correct type
     systemPrompt?: string;
   }): AsyncGenerator<BedrockAnthropicParsedChunk, void, unknown> {
-    const { messages, model, max_tokens, temperature, tools, systemPrompt } =
-      params;
+    const {
+      messages,
+      model,
+      max_tokens,
+      temperature,
+      tools,
+      systemPrompt
+    } = params;
 
     if (!model) {
-      return Promise.reject(new Error(LLM_PROXY_ERROR_MESSAGES.MISSING_MODEL));
+      return Promise.reject(
+        new Error("Model ID is required for AwsBedrockAnthropicService")
+      );
     }
 
     const body = JSON.stringify({
@@ -83,14 +98,14 @@ export default class AwsBedrockAnthropicService implements ClientService {
       temperature,
       messages,
       system: systemPrompt,
-      ...(tools && Array.isArray(tools) && tools.length ? { tools } : {}),
+      ...(tools && Array.isArray(tools) && tools.length ? { tools } : {})
     });
 
     const command = new InvokeModelWithResponseStreamCommand({
       modelId: model,
       body,
       contentType: "application/json",
-      accept: "application/json",
+      accept: "application/json"
     });
 
     const response = await this.bedrock.send(command);
@@ -100,7 +115,7 @@ export default class AwsBedrockAnthropicService implements ClientService {
 
       for await (const payload of response.body) {
         const decodedString = decoder.decode(payload.chunk?.bytes, {
-          stream: true,
+          stream: true
         });
 
         try {
