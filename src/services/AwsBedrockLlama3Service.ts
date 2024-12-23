@@ -80,20 +80,24 @@ export default class AwsBedrockLlama3Service implements ClientService {
       );
     }
 
+    let prompt = "<|begin_of_text|>";
+    messages.forEach((message) => {
+      const roleTag = message.role === "user" ? "user" : "assistant";
+      prompt += `<|start_header_id|>${roleTag}<|end_header_id|>\n${message.content}\n<|eot_id|>\n`;
+    });
+    prompt += "<|start_header_id|>assistant<|end_header_id|>\n";
+
     const body = JSON.stringify({
-      anthropic_version: "bedrock-2023-05-31",
-      max_tokens,
+      prompt,
+      max_gen_len: max_tokens,
       temperature,
-      messages,
-      system: systemPrompt,
-      ...(tools && Array.isArray(tools) && tools.length ? { tools } : {}),
+      top_p: 0.9,
     });
 
     const command = new InvokeModelWithResponseStreamCommand({
       modelId: model,
-      body,
+      body: JSON.stringify(body),
       contentType: "application/json",
-      accept: "application/json",
     });
 
     const response = await this.bedrock.send(command);
