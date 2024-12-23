@@ -25,10 +25,16 @@ interface GenerateLLMResponseParams {
 export async function generateLLMResponse(
   params: GenerateLLMResponseParams
 ): Promise<OpenAIResponse> {
-  const { messages, model, functions, max_tokens, temperature, credentials } =
-    params;
+  const {
+    messages,
+    model,
+    functions,
+    max_tokens,
+    temperature,
+    credentials
+  } = params;
 
-  // Step 1: Identify the provider based on the model
+  // Step 1: Identify the provisder based on the model
   const provider = ProviderFinder.getProvider(model);
 
   // Initialize the correct service based on the provider
@@ -69,7 +75,7 @@ export async function generateLLMResponse(
     max_tokens,
     temperature: temperature || 0,
     tools: functions,
-    systemPrompt: systemPrompt || "",
+    systemPrompt: systemPrompt || ""
   });
 
   // Step 4: Adapt the response if needed
@@ -82,8 +88,14 @@ export async function generateLLMResponse(
 export async function generateLLMStreamResponse(
   params: GenerateLLMResponseParams
 ): Promise<AsyncGenerator<OpenAIResponse>> {
-  const { messages, model, functions, max_tokens, temperature, credentials } =
-    params;
+  const {
+    messages,
+    model,
+    functions,
+    max_tokens,
+    temperature,
+    credentials
+  } = params;
 
   // Step 1: Identify the provider based on the model
   const provider = ProviderFinder.getProvider(model);
@@ -126,7 +138,7 @@ export async function generateLLMStreamResponse(
     max_tokens,
     temperature: temperature || 0,
     tools: functions,
-    systemPrompt: systemPrompt || "",
+    systemPrompt: systemPrompt || ""
   });
 
   // Step 4: Create and return the async generator
