@@ -167,15 +167,25 @@ export interface OpenAIResponse {
 
 // https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html
 export enum BedrockAnthropicSupportedLLMs {
-  CLAUDE_3_SONNET = "anthropic.claude-3-sonnet-20240229-v1:0",
-  CLAUDE_3_5_SONNET_V_1 = "anthropic.claude-3-5-sonnet-20240620-v1:0",
-  CLAUDE_3_5_SONNET_V_2 = "anthropic.claude-3-5-sonnet-20241022-v2:0",
+  // Claude 3 Family
   CLAUDE_3_OPUS = "anthropic.claude-3-opus-20240229-v1:0",
-  CLAUDE_V_2_1 = "anthropic.claude-v2:1",
-  CLAUDE_V_2 = "anthropic.claude-v2	",
+  CLAUDE_3_SONNET = "anthropic.claude-3-sonnet-20240229-v1:0",
   CLAUDE_3_HAIKU = "anthropic.claude-3-haiku-20240307-v1:0",
+  
+  // Claude 3.5 Family
+  CLAUDE_3_5_SONNET_V1 = "anthropic.claude-3-5-sonnet-20240620-v1:0",
+  CLAUDE_3_5_SONNET_V2 = "anthropic.claude-3-5-sonnet-20241022-v2:0",
   CLAUDE_3_5_HAIKU = "anthropic.claude-3-5-haiku-20241022-v1:0",
-  CLAUDE_INSTANT = "anthropic.claude-instant-v1",
+  
+  // Claude 2 Family
+  CLAUDE_V2_1 = "anthropic.claude-v2:1",
+  CLAUDE_V2 = "anthropic.claude-v2",
+  CLAUDE_INSTANT_V1 = "anthropic.claude-instant-v1",
+  
+  // US Region Specific
+  US_CLAUDE_3_HAIKU = "us.anthropic.claude-3-haiku-20240307-v1:0",
+  US_CLAUDE_3_5_HAIKU = "us.anthropic.claude-3-5-haiku-20241022-v1:0",
+  US_CLAUDE_3_5_SONNET = "us.anthropic.claude-3-5-sonnet-20240620-v1:0"
 }
 
 export enum BedrockAnthropicContentType {
