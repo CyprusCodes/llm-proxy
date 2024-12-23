@@ -11,7 +11,7 @@ export default class InputFormatAdapter {
     messages: any,
     provider: Providers
   ): {
-    adaptedMessages: OpenAIMessages | BedrockAnthropicMessage[];
+    adaptedMessages: OpenAIMessages | BedrockAnthropicMessage[] | any;
     systemPrompt?: string;
   } {
     switch (provider) {
@@ -106,6 +106,23 @@ export default class InputFormatAdapter {
 
         return { adaptedMessages, systemPrompt };
       }
+      case Providers.LLAMA_3_1_BEDROCK:
+        return {
+          // @ts-ignore
+          adaptedMessages: messages.map((msg) => {
+            if (msg.role === "function") {
+              return {
+                role: msg.role,
+                content: msg.content ?? "",
+                name: (msg as OpenAIFunctionMessage).name,
+              };
+            }
+            return {
+              role: msg.role,
+              content: msg.content ?? "function call",
+            };
+          }) as OpenAIMessages,
+        };
 
       default:
         throw new Error(`Unsupported provider: ${provider}`);
