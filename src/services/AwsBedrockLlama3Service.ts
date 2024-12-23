@@ -28,8 +28,7 @@ export default class AwsBedrockLlama3Service implements ClientService {
     tools?: any; // TODO: Define the correct type
     systemPrompt?: string;
   }): Promise<any> {
-    const { messages, model, max_tokens, temperature, systemPrompt, tools } =
-      params;
+    const { messages, model, max_tokens, temperature } = params;
 
     if (!model) {
       return Promise.reject(
@@ -37,15 +36,8 @@ export default class AwsBedrockLlama3Service implements ClientService {
       );
     }
 
-    let prompt = "<|begin_of_text|>";
-    messages.forEach((message) => {
-      const roleTag = message.role === "user" ? "user" : "assistant";
-      prompt += `<|start_header_id|>${roleTag}<|end_header_id|>\n${message.content}\n<|eot_id|>\n`;
-    });
-    prompt += "<|start_header_id|>assistant<|end_header_id|>\n";
-
     const body = {
-      prompt,
+      prompt: messages,
       max_gen_len: max_tokens,
       temperature,
       top_p: 0.9,
@@ -71,8 +63,7 @@ export default class AwsBedrockLlama3Service implements ClientService {
     tools?: any; // TODO: Define the correct type
     systemPrompt?: string;
   }): AsyncGenerator<BedrockAnthropicParsedChunk, void, unknown> {
-    const { messages, model, max_tokens, temperature, tools, systemPrompt } =
-      params;
+    const { messages, model, max_tokens, temperature } = params;
 
     if (!model) {
       return Promise.reject(
@@ -80,15 +71,8 @@ export default class AwsBedrockLlama3Service implements ClientService {
       );
     }
 
-    let prompt = "<|begin_of_text|>";
-    messages.forEach((message) => {
-      const roleTag = message.role === "user" ? "user" : "assistant";
-      prompt += `<|start_header_id|>${roleTag}<|end_header_id|>\n${message.content}\n<|eot_id|>\n`;
-    });
-    prompt += "<|start_header_id|>assistant<|end_header_id|>\n";
-
     const body = JSON.stringify({
-      prompt,
+      prompt: messages,
       max_gen_len: max_tokens,
       temperature,
       top_p: 0.9,
