@@ -3,10 +3,8 @@ import {
   BedrockRuntimeClient,
   InvokeModelWithResponseStreamCommand,
 } from "@aws-sdk/client-bedrock-runtime";
-import { BedrockAnthropicParsedChunk, Messages } from "../types";
-import { ClientService } from "./ClientService";
 
-export default class AwsBedrockLlama3Service implements ClientService {
+export default class AwsBedrockLlama3Service {
   private bedrock: BedrockRuntimeClient;
 
   constructor(awsAccessKey: string, awsSecretKey: string, region: string) {
@@ -20,26 +18,23 @@ export default class AwsBedrockLlama3Service implements ClientService {
   }
 
   async generateCompletion(params: {
-    messages: Messages;
     model?: string;
     max_tokens?: number;
     temperature?: number;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tools?: any; // TODO: Define the correct type
-    systemPrompt?: string;
+    messages: any;
   }): Promise<any> {
     const { messages, model, max_tokens, temperature } = params;
 
     if (!model) {
-      return Promise.reject(
-        new Error("Model ID is required for AwsBedrockAnthropicService")
-      );
+      throw new Error("Model ID is required.");
     }
+
+    console.log("messages", messages);
 
     const body = {
       prompt: messages,
-      max_gen_len: max_tokens,
-      temperature,
+      max_gen_len: max_tokens || 100,
+      temperature: temperature || 0.7,
       top_p: 0.9,
     };
 
@@ -49,58 +44,63 @@ export default class AwsBedrockLlama3Service implements ClientService {
       contentType: "application/json",
     });
 
-    const response = await this.bedrock.send(command);
-    return JSON.parse(new TextDecoder().decode(response.body));
+    try {
+      const response = await this.bedrock.send(command);
+      return JSON.parse(new TextDecoder().decode(response.body));
+    } catch (error) {
+      console.error("Error invoking the Llama model:", error);
+      throw error;
+    }
   }
 
-  // eslint-disable-next-line consistent-return
   async *generateStreamCompletion(params: {
-    messages: Messages;
     model?: string;
     max_tokens?: number;
     temperature?: number;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tools?: any; // TODO: Define the correct type
-    systemPrompt?: string;
-  }): AsyncGenerator<BedrockAnthropicParsedChunk, void, unknown> {
+    messages: any;
+  }): AsyncGenerator<any, void, unknown> {
     const { messages, model, max_tokens, temperature } = params;
 
     if (!model) {
-      return Promise.reject(
-        new Error("Model ID is required for AwsBedrockAnthropicService")
-      );
+      throw new Error("Model ID is required.");
     }
+
+    console.log("messages", messages);
 
     const body = JSON.stringify({
       prompt: messages,
-      max_gen_len: max_tokens,
-      temperature,
+      max_gen_len: max_tokens || 100,
+      temperature: temperature || 0.7,
       top_p: 0.9,
     });
 
     const command = new InvokeModelWithResponseStreamCommand({
       modelId: model,
-      body: JSON.stringify(body),
+      body,
       contentType: "application/json",
     });
 
-    const response = await this.bedrock.send(command);
+    try {
+      const response = await this.bedrock.send(command);
 
-    if (response.body) {
-      const decoder = new TextDecoder("utf-8");
+      if (response.body) {
+        const decoder = new TextDecoder("utf-8");
+        for await (const payload of response.body) {
+          const decodedString = decoder.decode(payload.chunk?.bytes, {
+            stream: true,
+          });
 
-      for await (const payload of response.body) {
-        const decodedString = decoder.decode(payload.chunk?.bytes, {
-          stream: true,
-        });
-
-        try {
-          const jsonObject = JSON.parse(decodedString);
-          yield jsonObject;
-        } catch (error) {
-          return Promise.reject(error);
+          try {
+            const jsonObject = JSON.parse(decodedString);
+            yield jsonObject;
+          } catch (error) {
+            throw new Error("Failed to parse the streaming response.");
+          }
         }
       }
+    } catch (error) {
+      console.error("Error invoking the Llama model with stream:", error);
+      throw error;
     }
   }
 }
