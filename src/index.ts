@@ -4,6 +4,7 @@ import AwsBedrockAnthropicService from "./services/AwsBedrockAnthropicService";
 import ProviderFinder from "./middleware/ProviderFinder";
 import InputFormatAdapter from "./middleware/InputFormatAdapter";
 import OutputFormatAdapter from "./middleware/OutputFormatAdapter";
+import AwsBedrockLlama3Service from "./services/AwsBedrockLlama3Service";
 
 // Define the credentials interface for flexibility
 interface Credentials {
@@ -32,7 +33,10 @@ export async function generateLLMResponse(
   const provider = ProviderFinder.getProvider(model);
 
   // Initialize the correct service based on the provider
-  let service: OpenAIService | AwsBedrockAnthropicService;
+  let service:
+    | OpenAIService
+    | AwsBedrockAnthropicService
+    | AwsBedrockLlama3Service;
   if (provider === Providers.OPENAI) {
     if (!credentials.apiKey) {
       return Promise.reject(
@@ -52,8 +56,20 @@ export async function generateLLMResponse(
       awsConfig.secretAccessKey,
       awsConfig.region
     );
+  } else if (provider === Providers.LLAMA_3_1_BEDROCK) {
+    const { awsConfig } = credentials;
+    if (!awsConfig) {
+      return Promise.reject(
+        new Error("AWS credentials are required for Bedrock models.")
+      );
+    }
+    service = new AwsBedrockLlama3Service(
+      awsConfig.accessKeyId,
+      awsConfig.secretAccessKey,
+      awsConfig.region
+    );
   } else {
-    return Promise.reject(new Error("Unsupported provider"));
+    return Promise.reject(new Error("Unsupported provider 4"));
   }
 
   // Step 2: Adapt messages and extract the system prompt
@@ -73,9 +89,15 @@ export async function generateLLMResponse(
   });
 
   // Step 4: Adapt the response if needed
-  return provider === Providers.OPENAI
-    ? (response as OpenAIResponse)
-    : (OutputFormatAdapter.adaptResponse(response, provider) as OpenAIResponse);
+  const adaptedResponse =
+    provider === Providers.OPENAI
+      ? response
+      : OutputFormatAdapter.adaptResponse({
+          response,
+          provider,
+          isStream: false,
+        });
+  return adaptedResponse as OpenAIResponse;
 }
 
 // Main function for streaming requests
@@ -89,7 +111,10 @@ export async function generateLLMStreamResponse(
   const provider = ProviderFinder.getProvider(model);
 
   // Initialize the correct service based on the provider
-  let service: OpenAIService | AwsBedrockAnthropicService;
+  let service:
+    | OpenAIService
+    | AwsBedrockAnthropicService
+    | AwsBedrockLlama3Service;
   if (provider === Providers.OPENAI) {
     if (!credentials.apiKey) {
       return Promise.reject(
@@ -109,8 +134,20 @@ export async function generateLLMStreamResponse(
       awsConfig.secretAccessKey,
       awsConfig.region
     );
+  } else if (provider === Providers.LLAMA_3_1_BEDROCK) {
+    const { awsConfig } = credentials;
+    if (!awsConfig) {
+      return Promise.reject(
+        new Error("AWS credentials are required for Bedrock models.")
+      );
+    }
+    service = new AwsBedrockLlama3Service(
+      awsConfig.accessKeyId,
+      awsConfig.secretAccessKey,
+      awsConfig.region
+    );
   } else {
-    return Promise.reject(new Error("Unsupported provider"));
+    return Promise.reject(new Error("Unsupported provider 3"));
   }
 
   // Step 2: Adapt messages and extract the system prompt
@@ -134,10 +171,11 @@ export async function generateLLMStreamResponse(
     for await (const chunk of stream) {
       yield provider === Providers.OPENAI
         ? (chunk as OpenAIResponse)
-        : (OutputFormatAdapter.adaptResponse(
-            chunk,
-            provider
-          ) as OpenAIResponse);
+        : ((await OutputFormatAdapter.adaptResponse({
+            response: chunk,
+            provider,
+            isStream: true,
+          })) as OpenAIResponse);
     }
   }
 

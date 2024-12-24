@@ -5,19 +5,19 @@ import {
   OpenAIMessages,
   Providers,
 } from "../types";
+import openaiToLlamaMessage from "../utils/inputFormatAdapterUtils/openAIToLlamaMessage";
 
 export default class InputFormatAdapter {
   static adaptMessages(
     messages: any,
     provider: Providers
   ): {
-    adaptedMessages: OpenAIMessages | BedrockAnthropicMessage[];
+    adaptedMessages: OpenAIMessages | BedrockAnthropicMessage[] | any;
     systemPrompt?: string;
   } {
     switch (provider) {
       case Providers.OPENAI:
         return {
-          // @ts-ignore
           adaptedMessages: messages.map((msg) => {
             if (msg.role === "function") {
               return {
@@ -49,7 +49,6 @@ export default class InputFormatAdapter {
 
         const systemPrompt = firstMessage.content ?? "";
         const adaptedMessages: any = [];
-        // @ts-ignore
         restMessages.forEach((msg) => {
           if (msg.role !== "user" && msg.role !== "assistant") {
             // Add the "empty" message before the current one
@@ -106,9 +105,15 @@ export default class InputFormatAdapter {
 
         return { adaptedMessages, systemPrompt };
       }
+      case Providers.LLAMA_3_1_BEDROCK: {
+        const adaptedMessages = openaiToLlamaMessage(messages);
+        return {
+          adaptedMessages,
+        };
+      }
 
       default:
-        throw new Error(`Unsupported provider: ${provider}`);
+        throw new Error(`Unsupported provider 1: ${provider}`);
     }
   }
 }

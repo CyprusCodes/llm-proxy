@@ -1,5 +1,6 @@
 import {
   BedrockAnthropicSupportedLLMs,
+  Llama3_1SupportedLLMs,
   OpenAISupportedLLMs,
   Providers,
 } from "../types";
@@ -19,6 +20,13 @@ export default class ProviderFinder {
       )
     ) {
       return Providers.ANTHROPIC_BEDROCK;
+    }
+    if (
+      Object.values(Llama3_1SupportedLLMs).includes(
+        model as Llama3_1SupportedLLMs
+      )
+    ) {
+      return Providers.LLAMA_3_1_BEDROCK;
     }
     // Throw an error for unsupported models
     throw new Error(`Unsupported model: ${model}`);
