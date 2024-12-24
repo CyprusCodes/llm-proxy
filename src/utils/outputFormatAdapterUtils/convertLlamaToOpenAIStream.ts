@@ -4,7 +4,7 @@ function convertLlamaToOpenAIStream(chunk: any): any {
     id: chunk.id, // Use input chunk's ID
     object: "chat.completion.chunk",
     created: chunk.created || Math.floor(Date.now() / 1000),
-    model: chunk.model || "gpt-4o-2024-08-06",
+    model: "aws-bedrock-llama",
     choices: [
       {
         index: 0,
