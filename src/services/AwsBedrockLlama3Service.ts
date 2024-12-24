@@ -28,9 +28,6 @@ export default class AwsBedrockLlama3Service {
     if (!model) {
       throw new Error("Model ID is required.");
     }
-
-    console.log("messages", messages);
-
     const body = {
       prompt: messages,
       max_gen_len: max_tokens || 100,
@@ -64,9 +61,6 @@ export default class AwsBedrockLlama3Service {
     if (!model) {
       throw new Error("Model ID is required.");
     }
-
-    console.log("messages", messages);
-
     const body = JSON.stringify({
       prompt: messages,
       max_gen_len: max_tokens || 100,

@@ -97,9 +97,6 @@ export async function generateLLMResponse(
           provider,
           isStream: false,
         });
-
-  console.log("Adapted Response:", adaptedResponse);
-
   return adaptedResponse as OpenAIResponse;
 }
 
@@ -168,8 +165,6 @@ export async function generateLLMStreamResponse(
     tools: functions,
     systemPrompt: systemPrompt || "",
   });
-
-  // console.log("Stream:", JSON.stringify(stream, null, 2));
 
   // Step 4: Create and return the async generator
   async function* streamGenerator(): AsyncGenerator<OpenAIResponse> {
