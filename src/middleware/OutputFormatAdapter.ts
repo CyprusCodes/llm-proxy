@@ -7,6 +7,7 @@ import {
   LLMResponse,
   Providers,
 } from "../types";
+import convertLlamaToOpenAIStream from "../utils/outputFormatAdapterUtils/convertLlamaToOpenAIStream";
 
 export default class OutputFormatAdapter {
   private static isToolUseStream = false;
@@ -17,8 +18,10 @@ export default class OutputFormatAdapter {
 
   private static toolName: string | undefined; // New: To store the tool name
 
-  static adaptResponse(response: any, provider: Providers): LLMResponse {
-    console.log("Response from generateLLMResponse", response);
+  static async adaptResponse(
+    response: any,
+    provider: Providers
+  ): Promise<LLMResponse> {
     if (!response) {
       throw new Error("Response object is null or undefined");
     }
@@ -33,7 +36,10 @@ export default class OutputFormatAdapter {
           }
           return this.adaptStreamingResponse(response);
 
-        case Providers.LLAMA_3_1_BEDROCK:
+        case Providers.LLAMA_3_1_BEDROCK: {
+          console.log("Converting Llama to OpenAI stream");
+          return await convertLlamaToOpenAIStream(response);
+        }
         default:
           throw new Error(`Unsupported provider 2: ${provider}`);
       }
