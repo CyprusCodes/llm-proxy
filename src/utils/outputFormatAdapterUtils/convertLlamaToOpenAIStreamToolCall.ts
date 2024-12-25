@@ -1,12 +1,14 @@
 function convertLlamaToOpenAIStreamToolCall(chunk) {
+
   function parseFunctionCall(generation) {
-    const functionCallRegex = /<function>\s*\{\s*"function_name":\s*"([^"]+)",\s*"parameter_name":\s*(\{[^}]+\})\s*\}<\/function>/;
+    const functionCallRegex =
+      /<function>\s*\{\s*"function_name":\s*"([^"]+)",\s*"parameters":\s*(\{\s*\})?\s*\}<\/function>/;
     const match = generation.match(functionCallRegex);
 
     if (match) {
       const functionCall = {
         name: match[1],
-        arguments: match[2] ? JSON.stringify(JSON.parse(match[2])) : ""
+        arguments: match[2] ? JSON.stringify(JSON.parse(match[2])) : "{}",
       };
       return functionCall;
     }
@@ -27,14 +29,14 @@ function convertLlamaToOpenAIStreamToolCall(chunk) {
         delta: {
           role: "assistant",
           content: null,
-          function_call: functionCall || { name: null, arguments: "" },
-          refusal: null
+          function_call: functionCall || { name: null, arguments: "{}" }, // Default empty arguments
+          refusal: null,
         },
         logprobs: null,
-        finish_reason: chunk.stop_reason || null
-      }
+        finish_reason: chunk.stop_reason || null,
+      },
     ],
-    usage: null
+    usage: null,
   };
 }
 

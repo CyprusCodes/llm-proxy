@@ -55,40 +55,25 @@ export default class AwsBedrockLlama3Service {
     max_tokens?: number;
     temperature?: number;
     messages: any;
+    tools?: any;
   }): AsyncGenerator<any, void, unknown> {
-    const { messages, model, max_tokens, temperature } = params;
+    const { messages, model, max_tokens, temperature, tools } = params;
 
     if (!model) {
       throw new Error("Model ID is required.");
     }
 
-    const weatherTool = {
-      name: "get_current_weather",
-      description: "Get the current weather in a given location",
-      parameters: {
-        type: "object",
-        properties: {
-          location: {
-            type: "string",
-            description: "The city and state, e.g. San Francisco, CA",
-          },
-        },
-        required: ["location"],
-      },
-    };
-
     const toolPrompt = `
 You have access to the following functions:
 
-Use the function '${weatherTool.name}' to '${weatherTool.description}':
-${JSON.stringify(weatherTool, null, 2)} 
+${JSON.stringify(tools, null, 2)} 
 
 If you choose to call a function ONLY reply in the following format with no prefix or suffix:
 
 <function>
 {
 "function_name": "the name of the function you want to call"
-"parameter_name": {
+"parameters": {
   "parameter_key": "the value of the parameter"
   }
 }
@@ -98,7 +83,7 @@ Example:
 <function>
 {
 "function_name": "get_current_weather"
-"parameter_name": {
+"parameters": {
   "location": "Miami"
   }
 }

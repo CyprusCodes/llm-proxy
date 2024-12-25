@@ -184,11 +184,7 @@ export async function generateLLMStreamResponse(
           const [first, second, third] = buffer;
 
           // Evaluate the condition
-          if (
-            first.generation === "\n\n" &&
-            second.generation === "<" &&
-            third.generation === "function"
-          ) {
+          if (second.generation === "<" && third.generation === "function") {
             isFunctionCall = true;
           }
 
@@ -246,8 +242,6 @@ export async function generateLLMStreamResponse(
                 provider,
                 isStream: true,
               })) as OpenAIResponse);
-
-        console.log("Stream chunk:", response);
         yield response;
       }
     }
