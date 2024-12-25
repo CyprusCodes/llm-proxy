@@ -1,5 +1,6 @@
+// @ts-ignore: Ignore the any type in the msg
 function convertLlamaToOpenAIStreamToolCall(chunk) {
-
+  // @ts-ignore: Ignore the any type in the msg
   function parseFunctionCall(generation) {
     const functionCallRegex =
       /<function>\s*\{\s*"function_name":\s*"([^"]+)",\s*"parameters":\s*(\{\s*\})?\s*\}<\/function>/;

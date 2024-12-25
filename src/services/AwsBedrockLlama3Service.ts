@@ -106,6 +106,7 @@ Reminder:
     if (match) {
       updatedMessages = messages.replace(
         systemMessageRegex,
+        // @ts-ignore: Ignore the any type in the msg
         (_, start, systemMessage, end) =>
           `${start}${systemMessage}\n${toolPrompt}${end}`
       );
