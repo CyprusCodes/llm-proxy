@@ -2,7 +2,7 @@
 export enum Providers {
   OPENAI = "OpenAI",
   ANTHROPIC_BEDROCK = "AnthropicBedrock",
-  COHERE_BEDROCK = "CohereBedrock", // NOTE: not supported  yet
+  LLAMA_3_1_BEDROCK = "Llama3.1",
 }
 
 export type OpenAIMessagesRoles =
@@ -298,6 +298,14 @@ export type BedrockAnthropicParsedChunk = {
   delta?: BedrockAnthropicContentBlock;
   "amazon-bedrock-invocationMetrics"?: BedrockAnthropicMetrics;
 };
+
+// LLAMA 3.1
+
+export enum Llama3_1SupportedLLMs {
+  LLAMA_3_1_8B = "meta.llama3-1-8b-instruct-v1:0",
+  LLAMA_3_1_70B_2 = "meta.llama3-1-70b-instruct-v1:0",
+  LLAMA_3_1_405B = "meta.llama3-1-405b-instruct-v1:0",
+}
 
 // GENERAL
 export type Messages = OpenAIMessages | BedrockAnthropicMessages;

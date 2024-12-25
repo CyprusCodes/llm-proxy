@@ -5,8 +5,11 @@ import {
   BedrockAnthropicToolResultContent,
   BedrockAnthropicToolUseContent,
   LLMResponse,
-  Providers
+  Providers,
 } from "../types";
+import convertLlamaToOpenAINonStream from "../utils/outputFormatAdapterUtils/convertLlamaToOpenAINonStream";
+import convertLlamaToOpenAIStream from "../utils/outputFormatAdapterUtils/convertLlamaToOpenAIStream";
+import convertLlamaToOpenAIStreamToolCall from "../utils/outputFormatAdapterUtils/convertLlamaToOpenAIStreamToolCall";
 
 export default class OutputFormatAdapter {
   private static isToolUseStream = false;
@@ -17,23 +20,41 @@ export default class OutputFormatAdapter {
 
   private static toolName: string | undefined; // New: To store the tool name
 
-  static adaptResponse(response: any, provider: Providers): LLMResponse {
+  static async adaptResponse({
+    response,
+    provider,
+    isStream,
+    isFunctionCall,
+  }: {
+    response: any;
+    provider: Providers;
+    isStream: boolean;
+    isFunctionCall?: boolean;
+  }): Promise<any> {
     if (!response) {
       throw new Error("Response object is null or undefined");
     }
-
     try {
       switch (provider) {
         case Providers.OPENAI:
           return response as LLMResponse;
         case Providers.ANTHROPIC_BEDROCK:
-          if (response.type === "message" && !response.delta) {
+          if (!isStream) {
             return this.adaptCompleteResponse(response);
           }
           return this.adaptStreamingResponse(response);
 
+        case Providers.LLAMA_3_1_BEDROCK: {
+          if (!isStream && !isFunctionCall) {
+            return convertLlamaToOpenAINonStream(response);
+          }
+          if (isFunctionCall) {
+            return convertLlamaToOpenAIStreamToolCall(response);
+          }
+          return convertLlamaToOpenAIStream(response);
+        }
         default:
-          throw new Error(`Unsupported provider: ${provider}`);
+          throw new Error(`Unsupported provider 2: ${provider}`);
       }
     } catch (error) {
       throw new Error(`Failed to adapt response: ${(error as Error).message}`);
@@ -51,10 +72,10 @@ export default class OutputFormatAdapter {
           index,
           message: {
             role: this.mapRole(contentBlock),
-            content: this.extractContent(contentBlock)
+            content: this.extractContent(contentBlock),
           },
           logprobs: null,
-          finish_reason: response.stop_reason || null
+          finish_reason: response.stop_reason || null,
         })
       ),
       usage: {
@@ -64,9 +85,9 @@ export default class OutputFormatAdapter {
           (response.usage?.input_tokens || 0) +
           (response.usage?.output_tokens || 0),
         prompt_tokens_details: { cached_tokens: 0 },
-        completion_tokens_details: { reasoning_tokens: 0 }
+        completion_tokens_details: { reasoning_tokens: 0 },
       },
-      system_fingerprint: response.system_fingerprint || "default_fingerprint"
+      system_fingerprint: response.system_fingerprint || "default_fingerprint",
     };
   }
 
@@ -170,12 +191,12 @@ export default class OutputFormatAdapter {
                 chunk.type === "content_block_delta" &&
                 chunk.delta?.type === "input_json_delta"
                   ? chunk.delta?.partial_json
-                  : this.toolArguments.join(", ")
-            }
+                  : this.toolArguments.join(", "),
+            },
           },
           logprobs: null,
-          finish_reason: isStop ? "stop" : null
-        }
+          finish_reason: isStop ? "stop" : null,
+        },
       ],
       usage: isStop
         ? {
@@ -185,13 +206,13 @@ export default class OutputFormatAdapter {
               (metrics?.inputTokenCount || 0) +
               (metrics?.outputTokenCount || 0),
             prompt_tokens_details: {
-              cached_tokens: 0
+              cached_tokens: 0,
             },
             completion_tokens_details: {
-              reasoning_tokens: 0
-            }
+              reasoning_tokens: 0,
+            },
           }
-        : null
+        : null,
     };
   }
 
@@ -210,11 +231,11 @@ export default class OutputFormatAdapter {
         {
           index: 0,
           delta: {
-            content
+            content,
           },
           logprobs: null,
-          finish_reason: isStop ? "stop" : null
-        }
+          finish_reason: isStop ? "stop" : null,
+        },
       ],
       usage: isStop
         ? {
@@ -224,13 +245,13 @@ export default class OutputFormatAdapter {
               (metrics?.inputTokenCount || 0) +
               (metrics?.outputTokenCount || 0),
             prompt_tokens_details: {
-              cached_tokens: 0
+              cached_tokens: 0,
             },
             completion_tokens_details: {
-              reasoning_tokens: 0
-            }
+              reasoning_tokens: 0,
+            },
           }
-        : null
+        : null,
     };
   }
 
