@@ -9,6 +9,7 @@ import {
 } from "../types";
 import convertLlamaToOpenAINonStream from "../utils/outputFormatAdapterUtils/convertLlamaToOpenAINonStream";
 import convertLlamaToOpenAIStream from "../utils/outputFormatAdapterUtils/convertLlamaToOpenAIStream";
+import convertLlamaToOpenAIStreamToolCall from "../utils/outputFormatAdapterUtils/convertLlamaToOpenAIStreamToolCall";
 
 export default class OutputFormatAdapter {
   private static isToolUseStream = false;
@@ -23,15 +24,16 @@ export default class OutputFormatAdapter {
     response,
     provider,
     isStream,
+    isFunctionCall,
   }: {
     response: any;
     provider: Providers;
     isStream: boolean;
-  }): Promise<LLMResponse> {
+    isFunctionCall?: boolean;
+  }): Promise<any> {
     if (!response) {
       throw new Error("Response object is null or undefined");
     }
-
     try {
       switch (provider) {
         case Providers.OPENAI:
@@ -43,11 +45,12 @@ export default class OutputFormatAdapter {
           return this.adaptStreamingResponse(response);
 
         case Providers.LLAMA_3_1_BEDROCK: {
-          if (!isStream) {
+          if (!isStream && !isFunctionCall) {
             return convertLlamaToOpenAINonStream(response);
           }
-
-          // Convert the streaming response to OpenAI format
+          if (isFunctionCall) {
+            return convertLlamaToOpenAIStreamToolCall(response);
+          }
           return convertLlamaToOpenAIStream(response);
         }
         default:

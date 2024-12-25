@@ -61,8 +61,77 @@ export default class AwsBedrockLlama3Service {
     if (!model) {
       throw new Error("Model ID is required.");
     }
+
+    const weatherTool = {
+      name: "get_current_weather",
+      description: "Get the current weather in a given location",
+      parameters: {
+        type: "object",
+        properties: {
+          location: {
+            type: "string",
+            description: "The city and state, e.g. San Francisco, CA",
+          },
+        },
+        required: ["location"],
+      },
+    };
+
+    const toolPrompt = `
+You have access to the following functions:
+
+Use the function '${weatherTool.name}' to '${weatherTool.description}':
+${JSON.stringify(weatherTool, null, 2)} 
+
+If you choose to call a function ONLY reply in the following format with no prefix or suffix:
+
+<function>
+{
+"function_name": "the name of the function you want to call"
+"parameter_name": {
+  "parameter_key": "the value of the parameter"
+  }
+}
+</function>
+
+Example:
+<function>
+{
+"function_name": "get_current_weather"
+"parameter_name": {
+  "location": "Miami"
+  }
+}
+
+</function>
+
+Reminder:
+- Function calls MUST follow the specified format, start with <function> and end with </function>
+- Required parameters MUST be specified
+- Only call one function at a time
+- Put the entire function call reply on one line
+- If there is no function call available, answer the question like normal with your current knowledge and do not tell the user about function calls
+`;
+
+    const systemMessageRegex =
+      /(<\|start_header_id\|>system<\|end_header_id\|>\n+)([\s\S]*?)(<\|eot_id\|>)/;
+
+    let updatedMessages = messages;
+    const match = messages.match(systemMessageRegex);
+    if (match) {
+      updatedMessages = messages.replace(
+        systemMessageRegex,
+        (_, start, systemMessage, end) =>
+          `${start}${systemMessage}\n${toolPrompt}${end}`
+      );
+    } else {
+      console.error(
+        "Regex did not match the expected structure. Please verify the messages content."
+      );
+    }
+
     const body = JSON.stringify({
-      prompt: messages,
+      prompt: updatedMessages,
       max_gen_len: max_tokens || 100,
       temperature: temperature || 0.7,
       top_p: 0.9,

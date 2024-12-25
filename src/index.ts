@@ -101,6 +101,8 @@ export async function generateLLMResponse(
 }
 
 // Main function for streaming requests
+// Main function for streaming requests
+// Main function for streaming requests
 export async function generateLLMStreamResponse(
   params: GenerateLLMResponseParams
 ): Promise<AsyncGenerator<OpenAIResponse>> {
@@ -147,7 +149,7 @@ export async function generateLLMStreamResponse(
       awsConfig.region
     );
   } else {
-    return Promise.reject(new Error("Unsupported provider 3"));
+    return Promise.reject(new Error("Unsupported provider"));
   }
 
   // Step 2: Adapt messages and extract the system prompt
@@ -168,14 +170,86 @@ export async function generateLLMStreamResponse(
 
   // Step 4: Create and return the async generator
   async function* streamGenerator(): AsyncGenerator<OpenAIResponse> {
+    const buffer: any[] = []; // Buffer to hold the first three chunks
+    let isFunctionCall = false;
+    const accumulatedChunks: any[] = []; // Accumulate chunks for function calls
+
     for await (const chunk of stream) {
-      yield provider === Providers.OPENAI
-        ? (chunk as OpenAIResponse)
-        : ((await OutputFormatAdapter.adaptResponse({
-            response: chunk,
-            provider,
-            isStream: true,
-          })) as OpenAIResponse);
+      if (!isFunctionCall) {
+        // Push the chunk to the buffer
+        buffer.push(chunk);
+
+        // Check condition if we have the first three chunks
+        if (buffer.length === 3) {
+          const [first, second, third] = buffer;
+
+          // Evaluate the condition
+          if (
+            first.generation === "\n\n" &&
+            second.generation === "<" &&
+            third.generation === "function"
+          ) {
+            isFunctionCall = true;
+          }
+
+          // Clear the buffer if condition met, else continue streaming
+          if (isFunctionCall) {
+            accumulatedChunks.push(...buffer);
+            buffer.length = 0;
+          } else {
+            // Yield the first chunk
+            yield provider === Providers.OPENAI
+              ? first
+              : ((await OutputFormatAdapter.adaptResponse({
+                  response: first,
+                  provider,
+                  isStream: true,
+                  isFunctionCall: false,
+                })) as OpenAIResponse);
+
+            buffer.shift(); // Remove the first chunk from the buffer
+          }
+        }
+      } else {
+        // Accumulate chunks for function call
+        accumulatedChunks.push(chunk);
+      }
+    }
+
+    if (isFunctionCall) {
+      // Pass the entire accumulated response to adaptResponse
+      const fullResponse = accumulatedChunks.reduce((acc, cur) => {
+        acc.generation += cur.generation;
+        return acc;
+      });
+
+      const response =
+        provider === Providers.OPENAI
+          ? { ...fullResponse, isFunctionCall: true }
+          : ((await OutputFormatAdapter.adaptResponse({
+              response: fullResponse,
+              provider,
+              isStream: false,
+              isFunctionCall: true,
+            })) as OpenAIResponse);
+
+      yield response;
+    } else {
+      // Handle any remaining chunks in the buffer for non-function calls
+      while (buffer.length > 0) {
+        const chunk = buffer.shift();
+        const response =
+          provider === Providers.OPENAI
+            ? chunk
+            : ((await OutputFormatAdapter.adaptResponse({
+                response: chunk,
+                provider,
+                isStream: true,
+              })) as OpenAIResponse);
+
+        console.log("Stream chunk:", response);
+        yield response;
+      }
     }
   }
 
