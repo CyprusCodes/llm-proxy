@@ -2,14 +2,15 @@
 function convertLlamaToOpenAIStreamToolCall(chunk) {
   // @ts-ignore: Ignore the any type in the msg
   function parseFunctionCall(generation) {
+    // Updated regex to capture nested JSON objects in the "parameters" field
     const functionCallRegex =
-      /<function>\s*\{\s*"function_name":\s*"([^"]+)",\s*"parameters":\s*(\{\s*\})?\s*\}<\/function>/;
+      /<function>\s*\{\s*"function_name":\s*"([^"]+)",\s*"parameters":\s*(\{.*?\})\s*\}<\/function>/s;
     const match = generation.match(functionCallRegex);
 
     if (match) {
       const functionCall = {
         name: match[1],
-        arguments: match[2] ? JSON.stringify(JSON.parse(match[2])) : "{}",
+        arguments: match[2],
       };
       return functionCall;
     }
