@@ -1,10 +1,9 @@
 // @ts-ignore: Ignore the any type in the msg
 function convertLlamaToOpenAIStreamToolCall(chunk) {
   // @ts-ignore: Ignore the any type in the msg
-  function parseFunctionCall(generation) {
-    // Updated regex to capture nested JSON objects in the "parameters" field
+  function parseFunctionCall(generation: string) {
     const functionCallRegex =
-      /<function>\s*\{\s*"function_name":\s*"([^"]+)",\s*"parameters":\s*(\{.*?\})\s*\}<\/function>/s;
+      /<function>\s*\{\s*"function_name":\s*"([^"]+)",\s*"parameters":\s*(\{.*?\})\s*\}/s;
     const match = generation.match(functionCallRegex);
 
     if (match) {
