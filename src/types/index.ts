@@ -171,21 +171,22 @@ export enum BedrockAnthropicSupportedLLMs {
   CLAUDE_3_OPUS = "anthropic.claude-3-opus-20240229-v1:0",
   CLAUDE_3_SONNET = "anthropic.claude-3-sonnet-20240229-v1:0",
   CLAUDE_3_HAIKU = "anthropic.claude-3-haiku-20240307-v1:0",
-  
+
   // Claude 3.5 Family
   CLAUDE_3_5_SONNET_V1 = "anthropic.claude-3-5-sonnet-20240620-v1:0",
   CLAUDE_3_5_SONNET_V2 = "anthropic.claude-3-5-sonnet-20241022-v2:0",
   CLAUDE_3_5_HAIKU = "anthropic.claude-3-5-haiku-20241022-v1:0",
-  
+
   // Claude 2 Family
   CLAUDE_V2_1 = "anthropic.claude-v2:1",
   CLAUDE_V2 = "anthropic.claude-v2",
   CLAUDE_INSTANT_V1 = "anthropic.claude-instant-v1",
-  
+
   // US Region Specific
   US_CLAUDE_3_HAIKU = "us.anthropic.claude-3-haiku-20240307-v1:0",
   US_CLAUDE_3_5_HAIKU = "us.anthropic.claude-3-5-haiku-20241022-v1:0",
-  US_CLAUDE_3_5_SONNET = "us.anthropic.claude-3-5-sonnet-20240620-v1:0"
+  US_CLAUDE_3_5_SONNET = "us.anthropic.claude-3-5-sonnet-20240620-v1:0",
+  US_CALUDE_3_5_SONNET_V2 = "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
 }
 
 export enum BedrockAnthropicContentType {
@@ -305,6 +306,9 @@ export enum Llama3_1SupportedLLMs {
   LLAMA_3_1_8B = "meta.llama3-1-8b-instruct-v1:0",
   LLAMA_3_1_70B_2 = "meta.llama3-1-70b-instruct-v1:0",
   LLAMA_3_1_405B = "meta.llama3-1-405b-instruct-v1:0",
+  US_CROSS_REGION_LLAMA_3_1_8B = "us.meta.llama3-1-8b-instruct-v1:0",
+  US_CROSS_REGION_LLAMA_3_1_70B_2 = "us.meta.llama3-1-70b-instruct-v1:0",
+  US_CROSS_REGION_LLAMA_3_1_405B = "us.meta.llama3-1-405b-instruct-v1:0",
 }
 
 // GENERAL
