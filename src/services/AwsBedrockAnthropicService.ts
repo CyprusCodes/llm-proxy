@@ -9,6 +9,7 @@ import {
   Messages,
 } from "../types";
 import { ClientService } from "./ClientService";
+import replaceKeyInObjects from "../utils/servicesUtils/replaceObjectKey";
 
 export default class AwsBedrockAnthropicService implements ClientService {
   private bedrock: BedrockRuntimeClient;
@@ -80,13 +81,23 @@ export default class AwsBedrockAnthropicService implements ClientService {
       );
     }
 
+    const validatedTools = replaceKeyInObjects(
+      tools,
+      "parameters",
+      "input_schema"
+    );
+
     const body = JSON.stringify({
       anthropic_version: "bedrock-2023-05-31",
       max_tokens,
       temperature,
       messages,
       system: systemPrompt,
-      ...(tools && Array.isArray(tools) && tools.length ? { tools } : {}),
+      ...(validatedTools &&
+      Array.isArray(validatedTools) &&
+      validatedTools.length
+        ? { tools: validatedTools }
+        : {}),
     });
 
     const command = new InvokeModelWithResponseStreamCommand({
