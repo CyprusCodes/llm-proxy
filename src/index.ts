@@ -5,6 +5,7 @@ import ProviderFinder from "./middleware/ProviderFinder";
 import InputFormatAdapter from "./middleware/InputFormatAdapter";
 import OutputFormatAdapter from "./middleware/OutputFormatAdapter";
 import AwsBedrockLlama3Service from "./services/AwsBedrockLlama3Service";
+import OpenAICompatibleService from "./services/OpenAICompatibleService";
 
 // Define the credentials interface for flexibility
 interface Credentials {
@@ -45,7 +46,7 @@ export async function generateLLMResponse(
   let service:
     | OpenAIService
     | AwsBedrockAnthropicService
-    | AwsBedrockLlama3Service;
+    | AwsBedrockLlama3Service
     | OpenAICompatibleService;
   if (provider === Providers.OPENAI) {
     if (!credentials.apiKey) {
@@ -78,6 +79,13 @@ export async function generateLLMResponse(
       awsConfig.secretAccessKey,
       awsConfig.region
     );
+  } else if (provider === Providers.OPENAI_COMPATIBLE_PROVIDER) {
+    if (!apiKey) {
+      return Promise.reject(
+        new Error("API key is required for OpenAI-compatible models.")
+      );
+    }
+    service = new OpenAICompatibleService(apiKey, baseUrl);
   } else {
     return Promise.reject(new Error("Unsupported provider 4"));
   }
@@ -96,6 +104,7 @@ export async function generateLLMResponse(
     temperature: temperature || 0,
     tools: functions,
     systemPrompt: systemPrompt || "",
+    
   });
 
   // Step 4: Adapt the response if needed
