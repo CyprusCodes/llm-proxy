@@ -3,6 +3,7 @@ export enum Providers {
   OPENAI = "OpenAI",
   ANTHROPIC_BEDROCK = "AnthropicBedrock",
   LLAMA_3_1_BEDROCK = "Llama3.1",
+  OPENAI_COMPATIBLE_PROVIDER = "OpenAICompatibleProvider"
 }
 
 export type OpenAIMessagesRoles =
@@ -186,14 +187,14 @@ export enum BedrockAnthropicSupportedLLMs {
   US_CLAUDE_3_HAIKU = "us.anthropic.claude-3-haiku-20240307-v1:0",
   US_CLAUDE_3_5_HAIKU = "us.anthropic.claude-3-5-haiku-20241022-v1:0",
   US_CLAUDE_3_5_SONNET = "us.anthropic.claude-3-5-sonnet-20240620-v1:0",
-  US_CALUDE_3_5_SONNET_V2 = "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+  US_CALUDE_3_5_SONNET_V2 = "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
 }
 
 export enum BedrockAnthropicContentType {
   TEXT = "text",
   IMAGE = "image",
   TOOL_USE = "tool_use",
-  TOOL_RESULT = "tool_result",
+  TOOL_RESULT = "tool_result"
 }
 
 export type BedrockAnthropicMessageRole = "user" | "assistant";
@@ -308,7 +309,7 @@ export enum Llama3_1SupportedLLMs {
   LLAMA_3_1_405B = "meta.llama3-1-405b-instruct-v1:0",
   US_CROSS_REGION_LLAMA_3_1_8B = "us.meta.llama3-1-8b-instruct-v1:0",
   US_CROSS_REGION_LLAMA_3_1_70B_2 = "us.meta.llama3-1-70b-instruct-v1:0",
-  US_CROSS_REGION_LLAMA_3_1_405B = "us.meta.llama3-1-405b-instruct-v1:0",
+  US_CROSS_REGION_LLAMA_3_1_405B = "us.meta.llama3-1-405b-instruct-v1:0"
 }
 
 // GENERAL
