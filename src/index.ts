@@ -45,7 +45,8 @@ export async function generateLLMResponse(
   let service:
     | OpenAIService
     | AwsBedrockAnthropicService
-    | AwsBedrockLlama3Service;
+    | AwsBedrockLlama3Service
+    | OpenAICompatibleService;
   if (provider === Providers.OPENAI) {
     if (!credentials.apiKey) {
       return Promise.reject(
@@ -268,7 +269,7 @@ export async function generateLLMStreamResponse(
       while (buffer.length > 0) {
         const chunk = buffer.shift();
         const response =
-          provider === Providers.OPENAI 
+          provider === Providers.OPENAI
             ? chunk
             : ((await OutputFormatAdapter.adaptResponse({
                 response: chunk,
