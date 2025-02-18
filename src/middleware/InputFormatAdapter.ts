@@ -16,7 +16,7 @@ export default class InputFormatAdapter {
     systemPrompt?: string;
   } {
     switch (provider) {
-      case Providers.OPENAI:
+      case Providers.OPENAI || Providers.OPENAI_COMPATIBLE_PROVIDER:
         return {
           // @ts-ignore: Ignore the any type in the msg
           adaptedMessages: messages.map((msg) => {
