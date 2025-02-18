@@ -20,23 +20,33 @@ interface GenerateLLMResponseParams {
   max_tokens: number;
   temperature?: number;
   credentials: Credentials;
+  baseUrl?: string;
 }
 
 // Main function for non-streaming requests
 export async function generateLLMResponse(
   params: GenerateLLMResponseParams
 ): Promise<OpenAIResponse> {
-  const { messages, model, functions, max_tokens, temperature, credentials } =
-    params;
+  const {
+    messages,
+    model,
+    functions,
+    max_tokens,
+    temperature,
+    credentials,
+    baseUrl,
+    apiKey,
+  } = params;
 
   // Step 1: Identify the provider based on the model
-  const provider = ProviderFinder.getProvider(model);
+  const provider = ProviderFinder.getProvider(model, baseUrl);
 
   // Initialize the correct service based on the provider
   let service:
     | OpenAIService
     | AwsBedrockAnthropicService
     | AwsBedrockLlama3Service;
+    | OpenAICompatibleService;
   if (provider === Providers.OPENAI) {
     if (!credentials.apiKey) {
       return Promise.reject(

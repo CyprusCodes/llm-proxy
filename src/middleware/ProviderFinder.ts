@@ -6,7 +6,7 @@ import {
 } from "../types";
 
 export default class ProviderFinder {
-  static getProvider(model: string): Providers {
+  static getProvider(model: string, baseUrl?: string): Providers {
     // Check if the model belongs to OpenAI-supported LLMs
     if (
       Object.values(OpenAISupportedLLMs).includes(model as OpenAISupportedLLMs)
@@ -28,6 +28,10 @@ export default class ProviderFinder {
     ) {
       return Providers.LLAMA_3_1_BEDROCK;
     }
+    if (baseUrl) {
+      return Providers.OPENAI_COMPATIBLE_PROVIDER;
+    }
+
     // Throw an error for unsupported models
     throw new Error(`Unsupported model: ${model}`);
   }
