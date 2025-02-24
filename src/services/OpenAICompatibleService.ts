@@ -74,9 +74,6 @@ export default class OpenAICompatibleService implements ClientService {
         temperature,
         functions: tools,
         stream: true,
-        stream_options: {
-          include_usage: true,
-        },
       });
 
       for await (const chunk of stream) {
