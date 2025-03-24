@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { OpenAIMessages, OpenAIResponse } from "../types";
+import { OpenAIMessages, OpenAIReasoningType, OpenAIResponse } from "../types";
 import { ClientService } from "./ClientService";
 
 export default class OpenAIService implements ClientService {
@@ -14,12 +14,14 @@ export default class OpenAIService implements ClientService {
     model,
     max_tokens,
     temperature,
+    reasoning,
     tools,
   }: {
     messages: OpenAIMessages;
     model: string;
     max_tokens: number;
     temperature: number;
+    reasoning?: OpenAIReasoningType;
     systemPrompt?: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tools?: any;
@@ -37,6 +39,7 @@ export default class OpenAIService implements ClientService {
         max_tokens,
         temperature,
         functions: tools,
+        reasoning_effort: reasoning,
       });
       return response as OpenAIResponse;
     } catch (error) {
@@ -49,6 +52,7 @@ export default class OpenAIService implements ClientService {
     messages,
     model,
     max_tokens,
+    reasoning,
     temperature,
     tools,
   }: {
@@ -56,6 +60,7 @@ export default class OpenAIService implements ClientService {
     model: string;
     max_tokens: number;
     temperature: number;
+    reasoning?: OpenAIReasoningType;
     systemPrompt?: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tools?: any;
@@ -78,6 +83,7 @@ export default class OpenAIService implements ClientService {
         stream_options: {
           include_usage: true,
         },
+        reasoning_effort: reasoning,
       });
 
       for await (const chunk of stream) {
