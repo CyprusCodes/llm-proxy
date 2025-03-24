@@ -315,11 +315,3 @@ export enum Llama3_1SupportedLLMs {
 // GENERAL
 export type Messages = OpenAIMessages | BedrockAnthropicMessages;
 export type LLMResponse = OpenAIResponse | BedrockAnthropicResponse;
-
-export enum OpenAIReasoning {
-  LOW = "low",
-  MEDIUM = "medium",
-  HIGH = "high",
-}
-
-export type OpenAIReasoningType = "low" | "medium" | "high";
