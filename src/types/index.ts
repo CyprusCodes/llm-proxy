@@ -91,7 +91,7 @@ export enum OpenAISupportedLLMs {
   GPT_4_1_MINI = "gpt-4.1-mini",
   GPT_4_1_NANO = "gpt-4.1-nano",
   GPT_4_5 = "gpt-4.5",
-  GPT_4_O_LATEST = "chatgpt-4o-latest", // points to the latest version of gpt-4o
+  GPT_4_O_LATEST = "chatgpt-4o-latest",
   GPT_4_O = "gpt-4o",
   GPT_4_O_2024_11_20 = "gpt-4o-2024-11-20",
   GPT_4_O_2024_08_06 = "gpt-4o-2024-08-06",
