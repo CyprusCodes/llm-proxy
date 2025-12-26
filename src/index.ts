@@ -31,8 +31,14 @@ interface GenerateLLMResponseParams {
 export async function generateLLMResponse(
   params: GenerateLLMResponseParams
 ): Promise<OpenAIResponse> {
-  const { messages, model, functions, max_tokens, temperature, credentials } =
-    params;
+  const {
+    messages,
+    model,
+    functions,
+    max_tokens,
+    temperature,
+    credentials
+  } = params;
 
   const { openAICompatibleProviderConfig } = credentials;
   const { openAICompatibleProviderKey, baseUrl } =
@@ -104,7 +110,7 @@ export async function generateLLMResponse(
     max_tokens,
     temperature: temperature || 0,
     tools: functions,
-    systemPrompt: systemPrompt || "",
+    systemPrompt: systemPrompt || ""
   });
 
   // Step 4: Adapt the response if needed
@@ -115,7 +121,7 @@ export async function generateLLMResponse(
       : OutputFormatAdapter.adaptResponse({
           response,
           provider,
-          isStream: false,
+          isStream: false
         });
   return adaptedResponse as OpenAIResponse;
 }
@@ -126,8 +132,14 @@ export async function generateLLMResponse(
 export async function generateLLMStreamResponse(
   params: GenerateLLMResponseParams
 ): Promise<AsyncGenerator<OpenAIResponse>> {
-  const { messages, model, functions, max_tokens, temperature, credentials } =
-    params;
+  const {
+    messages,
+    model,
+    functions,
+    max_tokens,
+    temperature,
+    credentials
+  } = params;
 
   const { openAICompatibleProviderConfig } = credentials;
   const { openAICompatibleProviderKey, baseUrl } =
@@ -135,6 +147,7 @@ export async function generateLLMStreamResponse(
 
   // Step 1: Identify the provider based on the model
   const provider = ProviderFinder.getProvider(model, baseUrl);
+  console.log("provider", provider);
 
   // Initialize the correct service based on the provider
   let service:
@@ -199,11 +212,23 @@ export async function generateLLMStreamResponse(
     max_tokens,
     temperature: temperature || 0,
     tools: functions,
-    systemPrompt: systemPrompt || "",
+    systemPrompt: systemPrompt || ""
   });
 
   // Step 4: Create and return the async generator
   async function* streamGenerator(): AsyncGenerator<OpenAIResponse> {
+    const isOpenAIFormat =
+      provider === Providers.OPENAI ||
+      provider === Providers.OPENAI_COMPATIBLE_PROVIDER;
+
+    if (isOpenAIFormat) {
+      for await (const chunk of stream) {
+        yield chunk as OpenAIResponse;
+      }
+      return;
+    }
+
+    // Buffering logic for Bedrock providers
     const buffer: any[] = []; // Buffer to hold the first three chunks
     let isFunctionCall = false;
     const accumulatedChunks: any[] = []; // Accumulate chunks for function calls
@@ -228,14 +253,12 @@ export async function generateLLMStreamResponse(
             buffer.length = 0;
           } else {
             // Yield the first chunk
-            yield provider === Providers.OPENAI
-              ? first
-              : ((await OutputFormatAdapter.adaptResponse({
-                  response: first,
-                  provider,
-                  isStream: true,
-                  isFunctionCall: false,
-                })) as OpenAIResponse);
+            yield (await OutputFormatAdapter.adaptResponse({
+              response: first,
+              provider,
+              isStream: true,
+              isFunctionCall: false
+            })) as OpenAIResponse;
 
             buffer.shift(); // Remove the first chunk from the buffer
           }
@@ -253,29 +276,23 @@ export async function generateLLMStreamResponse(
         return acc;
       });
 
-      const response =
-        provider === Providers.OPENAI
-          ? { ...fullResponse, isFunctionCall: true }
-          : ((await OutputFormatAdapter.adaptResponse({
-              response: fullResponse,
-              provider,
-              isStream: false,
-              isFunctionCall: true,
-            })) as OpenAIResponse);
+      const response = (await OutputFormatAdapter.adaptResponse({
+        response: fullResponse,
+        provider,
+        isStream: false,
+        isFunctionCall: true
+      })) as OpenAIResponse;
 
       yield response;
     } else {
       // Handle any remaining chunks in the buffer for non-function calls
       while (buffer.length > 0) {
         const chunk = buffer.shift();
-        const response =
-          provider === Providers.OPENAI
-            ? chunk
-            : ((await OutputFormatAdapter.adaptResponse({
-                response: chunk,
-                provider,
-                isStream: true,
-              })) as OpenAIResponse);
+        const response = (await OutputFormatAdapter.adaptResponse({
+          response: chunk,
+          provider,
+          isStream: true
+        })) as OpenAIResponse;
         yield response;
       }
     }
