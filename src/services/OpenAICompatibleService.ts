@@ -2,6 +2,34 @@ import OpenAI from "openai";
 import { OpenAIMessages, OpenAIResponse } from "../types";
 import { ClientService } from "./ClientService";
 
+function normalizeTools(tools?: any[]): any[] | undefined {
+  if (!Array.isArray(tools)) return undefined;
+
+  return tools.map((tool) => {
+    // Already correct
+    if (tool?.type === "function" && tool.function) {
+      return tool;
+    }
+
+    // Needs reformatting
+    if (tool?.type === "function" && tool.name && tool.parameters) {
+      return {
+        type: "function",
+        function: {
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.parameters,
+        },
+      };
+    }
+
+    // Unknown / unsupported tool shape
+    throw new Error(
+      `Invalid tool definition encountered: ${JSON.stringify(tool, null, 2)}`
+    );
+  });
+}
+
 export default class OpenAICompatibleService implements ClientService {
   private openai: OpenAI;
 
@@ -61,10 +89,10 @@ export default class OpenAICompatibleService implements ClientService {
     tools?: any;
   }): AsyncGenerator<any, void, unknown> {
     if (!model) {
-      return Promise.reject(
-        new Error("Model ID is required for OpenAIService.")
-      );
+      throw new Error("Model ID is required for OpenAIService.");
     }
+
+    const normalizedTools = normalizeTools(tools);
 
     try {
       const stream = await this.openai.chat.completions.create({
@@ -72,7 +100,7 @@ export default class OpenAICompatibleService implements ClientService {
         messages,
         max_tokens,
         temperature,
-        functions: tools,
+        tools: normalizedTools,
         stream: true,
         stream_options: {
           include_usage: true,
@@ -83,7 +111,7 @@ export default class OpenAICompatibleService implements ClientService {
         yield chunk;
       }
     } catch (error) {
-      return Promise.reject(error);
+      throw error;
     }
   }
 }

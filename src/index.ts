@@ -31,14 +31,8 @@ interface GenerateLLMResponseParams {
 export async function generateLLMResponse(
   params: GenerateLLMResponseParams
 ): Promise<OpenAIResponse> {
-  const {
-    messages,
-    model,
-    functions,
-    max_tokens,
-    temperature,
-    credentials
-  } = params;
+  const { messages, model, functions, max_tokens, temperature, credentials } =
+    params;
 
   const { openAICompatibleProviderConfig } = credentials;
   const { openAICompatibleProviderKey, baseUrl } =
@@ -110,7 +104,7 @@ export async function generateLLMResponse(
     max_tokens,
     temperature: temperature || 0,
     tools: functions,
-    systemPrompt: systemPrompt || ""
+    systemPrompt: systemPrompt || "",
   });
 
   // Step 4: Adapt the response if needed
@@ -121,7 +115,7 @@ export async function generateLLMResponse(
       : OutputFormatAdapter.adaptResponse({
           response,
           provider,
-          isStream: false
+          isStream: false,
         });
   return adaptedResponse as OpenAIResponse;
 }
@@ -132,14 +126,8 @@ export async function generateLLMResponse(
 export async function generateLLMStreamResponse(
   params: GenerateLLMResponseParams
 ): Promise<AsyncGenerator<OpenAIResponse>> {
-  const {
-    messages,
-    model,
-    functions,
-    max_tokens,
-    temperature,
-    credentials
-  } = params;
+  const { messages, model, functions, max_tokens, temperature, credentials } =
+    params;
 
   const { openAICompatibleProviderConfig } = credentials;
   const { openAICompatibleProviderKey, baseUrl } =
@@ -147,7 +135,6 @@ export async function generateLLMStreamResponse(
 
   // Step 1: Identify the provider based on the model
   const provider = ProviderFinder.getProvider(model, baseUrl);
-  console.log("provider", provider);
 
   // Initialize the correct service based on the provider
   let service:
@@ -212,7 +199,7 @@ export async function generateLLMStreamResponse(
     max_tokens,
     temperature: temperature || 0,
     tools: functions,
-    systemPrompt: systemPrompt || ""
+    systemPrompt: systemPrompt || "",
   });
 
   // Step 4: Create and return the async generator
@@ -257,7 +244,7 @@ export async function generateLLMStreamResponse(
               response: first,
               provider,
               isStream: true,
-              isFunctionCall: false
+              isFunctionCall: false,
             })) as OpenAIResponse;
 
             buffer.shift(); // Remove the first chunk from the buffer
@@ -280,7 +267,7 @@ export async function generateLLMStreamResponse(
         response: fullResponse,
         provider,
         isStream: false,
-        isFunctionCall: true
+        isFunctionCall: true,
       })) as OpenAIResponse;
 
       yield response;
@@ -291,7 +278,7 @@ export async function generateLLMStreamResponse(
         const response = (await OutputFormatAdapter.adaptResponse({
           response: chunk,
           provider,
-          isStream: true
+          isStream: true,
         })) as OpenAIResponse;
         yield response;
       }
