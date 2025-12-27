@@ -100,7 +100,7 @@ export default class OpenAICompatibleService implements ClientService {
         messages,
         max_tokens,
         temperature,
-        tools: normalizedTools,
+        ...(normalizedTools && { tools: normalizedTools }),
         stream: true,
         stream_options: {
           include_usage: true,
