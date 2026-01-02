@@ -94,24 +94,20 @@ export default class OpenAICompatibleService implements ClientService {
 
     const normalizedTools = normalizeTools(tools);
 
-    try {
-      const stream = await this.openai.chat.completions.create({
-        model,
-        messages,
-        max_tokens,
-        temperature,
-        ...(normalizedTools && { tools: normalizedTools }),
-        stream: true,
-        stream_options: {
-          include_usage: true,
-        },
-      });
+    const stream = await this.openai.chat.completions.create({
+      model,
+      messages,
+      max_tokens,
+      temperature,
+      ...(normalizedTools && { tools: normalizedTools }),
+      stream: true,
+      stream_options: {
+        include_usage: true,
+      },
+    });
 
-      for await (const chunk of stream) {
-        yield chunk;
-      }
-    } catch (error) {
-      throw error;
+    for await (const chunk of stream) {
+      yield chunk;
     }
   }
 }
