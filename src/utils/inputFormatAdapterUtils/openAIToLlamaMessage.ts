@@ -1,4 +1,5 @@
-import { OpenAIMessages, OpenAIMessage } from "llm-proxy"; // Ensure OpenAIMessage is the base type for all message variants
+import { OpenAIMessages, OpenAIMessage } from "llm-proxy";
+// Ensure OpenAIMessage is the base type for all message variants
 
 const openaiToLlamaMessage = (openaiMessages: OpenAIMessages): string => {
   let llamaPrompt = "<|begin_of_text|>";
@@ -6,7 +7,7 @@ const openaiToLlamaMessage = (openaiMessages: OpenAIMessages): string => {
   // Explicitly type updatedMessages as an array of OpenAIMessage
   const updatedMessages: OpenAIMessage[] = [];
 
-  openaiMessages.forEach((msg) => {
+  openaiMessages.forEach(msg => {
     const { role, content } = msg;
 
     if (role === "function") {
@@ -21,7 +22,7 @@ const openaiToLlamaMessage = (openaiMessages: OpenAIMessages): string => {
     }
   });
 
-  updatedMessages.forEach((msg) => {
+  updatedMessages.forEach(msg => {
     const { role, content } = msg;
 
     const validRoles = ["system", "user", "assistant"];
