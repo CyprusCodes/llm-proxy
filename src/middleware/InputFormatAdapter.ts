@@ -21,7 +21,7 @@ export default class InputFormatAdapter {
         return {
           // @ts-ignore: Ignore the any type in the msg
           adaptedMessages: messages
-            .map((msg:any) => {
+            .map((msg: any) => {
               // Skip 'function' role messages - they should have been converted to tool format earlier
               if (msg.role === "function") {
                 return null;
@@ -31,6 +31,9 @@ export default class InputFormatAdapter {
               const adaptedMsg: any = {
                 role: msg.role,
                 content: msg.content,
+                ...(msg.thought_signature && {
+                  thought_signature: msg.thought_signature,
+                }),
               };
 
               // If it's an assistant message with tool_calls, preserve them
