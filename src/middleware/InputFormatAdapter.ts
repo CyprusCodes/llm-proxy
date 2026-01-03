@@ -3,7 +3,7 @@ import {
   BedrockAnthropicMessage,
   OpenAIFunctionMessage,
   OpenAIMessages,
-  Providers
+  Providers,
 } from "../types";
 import openaiToLlamaMessage from "../utils/inputFormatAdapterUtils/openAIToLlamaMessage";
 
@@ -20,19 +20,22 @@ export default class InputFormatAdapter {
       case Providers.OPENAI_COMPATIBLE_PROVIDER:
         return {
           // @ts-ignore: Ignore the any type in the msg
-          adaptedMessages: messages.map(msg => {
+          adaptedMessages: messages.map((msg) => {
             if (msg.role === "function") {
               return {
                 role: msg.role,
                 content: msg.content ?? "",
-                name: (msg as OpenAIFunctionMessage).name
+                ...(msg.thought_signature && {
+                  thought_signature: msg.thought_signature,
+                }),
+                name: (msg as OpenAIFunctionMessage).name,
               };
             }
             return {
               role: msg.role,
-              content: msg.content ?? "function call"
+              content: msg.content ?? msg.function_call,
             };
-          }) as OpenAIMessages
+          }) as OpenAIMessages,
         };
 
       case Providers.ANTHROPIC_BEDROCK: {
@@ -52,7 +55,7 @@ export default class InputFormatAdapter {
         const systemPrompt = firstMessage.content ?? "";
         const adaptedMessages: any = [];
         // @ts-ignore: Ignore the any type in the msg
-        restMessages.forEach(msg => {
+        restMessages.forEach((msg) => {
           if (msg.role !== "user" && msg.role !== "assistant") {
             // Add the "empty" message before the current one
             adaptedMessages.push({
@@ -60,9 +63,9 @@ export default class InputFormatAdapter {
               content: [
                 {
                   type: BedrockAnthropicContentType.TEXT,
-                  text: ":"
-                }
-              ]
+                  text: ":",
+                },
+              ],
             });
 
             // Change the role to "assistant" for the current message
@@ -71,9 +74,9 @@ export default class InputFormatAdapter {
               content: [
                 {
                   type: BedrockAnthropicContentType.TEXT,
-                  text: msg.content ?? ""
-                }
-              ]
+                  text: msg.content ?? "",
+                },
+              ],
             });
           } else {
             // Add the message as-is
@@ -82,9 +85,9 @@ export default class InputFormatAdapter {
               content: [
                 {
                   type: BedrockAnthropicContentType.TEXT,
-                  text: msg.content ?? msg.function_call.arguments
-                }
-              ]
+                  text: msg.content ?? msg.function_call.arguments,
+                },
+              ],
             });
           }
         });
@@ -98,9 +101,9 @@ export default class InputFormatAdapter {
               content: [
                 {
                   type: BedrockAnthropicContentType.TEXT,
-                  text: ":"
-                }
-              ]
+                  text: ":",
+                },
+              ],
             });
             i += 1; // Skip the inserted message
           }
@@ -111,7 +114,7 @@ export default class InputFormatAdapter {
       case Providers.LLAMA_3_1_BEDROCK: {
         const adaptedMessages = openaiToLlamaMessage(messages);
         return {
-          adaptedMessages
+          adaptedMessages,
         };
       }
 
