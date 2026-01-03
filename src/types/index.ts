@@ -152,6 +152,16 @@ export interface OpenAIResponse {
     message: {
       role: string;
       content: string;
+      refusal?: string | null; // New field for GPT-5.2+
+      annotations?: Array<any>; // New field for GPT-5.2+
+      tool_calls?: Array<{
+        id: string;
+        type: string;
+        function: {
+          name: string;
+          arguments: string;
+        };
+      }>;
       function_call?: {
         name: string;
         arguments: any; // TODO: i guess this is supposed to be string
@@ -164,8 +174,13 @@ export interface OpenAIResponse {
     prompt_tokens: number;
     completion_tokens: number;
     total_tokens: number;
-    prompt_tokens_details?: { cached_tokens: number };
-    completion_tokens_details?: { reasoning_tokens: number };
+    prompt_tokens_details?: { cached_tokens?: number; audio_tokens?: number };
+    completion_tokens_details?: {
+      reasoning_tokens?: number;
+      audio_tokens?: number;
+      accepted_prediction_tokens?: number;
+      rejected_prediction_tokens?: number;
+    };
   };
   system_fingerprint: string;
 }
