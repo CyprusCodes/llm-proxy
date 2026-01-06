@@ -16,8 +16,7 @@ export default class InputFormatAdapter {
     systemPrompt?: string;
   } {
     switch (provider) {
-      case Providers.OPENAI:
-      case Providers.OPENAI_COMPATIBLE_PROVIDER:
+      case Providers.OPENAI: {
         return {
           // @ts-ignore: Ignore the any type in the msg
           adaptedMessages: messages
@@ -62,6 +61,54 @@ export default class InputFormatAdapter {
             })
             .filter(Boolean) as OpenAIMessages,
         };
+      }
+
+      case Providers.OPENAI_COMPATIBLE_PROVIDER: {
+        return {
+          // @ts-ignore: Ignore the any type in the msg
+          adaptedMessages: messages
+            .map((msg: any) => {
+              // Skip 'function' role messages - they should have been converted to tool format earlier
+              if (msg.role === "function") {
+                return null;
+              }
+
+              // Preserve the original message structure, including tool_calls if present
+              const adaptedMsg: any = {
+                role: msg.role,
+                content: msg.content,
+              };
+
+              // If it's an assistant message with tool_calls, preserve them
+              if (msg.role === "assistant" && msg.tool_calls) {
+                adaptedMsg.tool_calls = msg.tool_calls;
+                // content can be null when tool_calls is present
+                if (adaptedMsg.content === undefined) {
+                  adaptedMsg.content = null;
+                }
+              } else if (msg.role === "tool") {
+                // For tool role, preserve tool_call_id and name
+                adaptedMsg.tool_call_id = msg.tool_call_id;
+                adaptedMsg.name = msg.name;
+                // Ensure content is a string for tool messages
+                if (!adaptedMsg.content) {
+                  adaptedMsg.content = "";
+                }
+              } else {
+                // For other messages, ensure content is not null/undefined
+                if (
+                  adaptedMsg.content === null ||
+                  adaptedMsg.content === undefined
+                ) {
+                  adaptedMsg.content = "";
+                }
+              }
+
+              return adaptedMsg;
+            })
+            .filter(Boolean) as OpenAIMessages,
+        };
+      }
 
       case Providers.ANTHROPIC_BEDROCK: {
         if (!messages.length) {
