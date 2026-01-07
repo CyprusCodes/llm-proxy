@@ -37,6 +37,13 @@ function reformatMessagesWithThoughtSignature(
   const reformatted: OpenAIMessages = [];
   let i = 0;
 
+  const makeToolCallId = (): string => {
+    const prefix = "call_";
+    const base = uuid().replace(/-/g, ""); // 32 chars
+    const id = `${prefix}${base}`; // 37 chars total
+    return id.length > 40 ? id.slice(0, 40) : id;
+  };
+
   while (i < messages.length) {
     const message = messages[i];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,8 +64,8 @@ function reformatMessagesWithThoughtSignature(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const nextMsg = nextMessage as any;
 
-      // Generate a unique ID for the tool call
-      const toolCallId = `function-call-${uuid()}`;
+      // Generate a unique ID for the tool call (<= 40 chars)
+      const toolCallId = makeToolCallId();
 
       // Extract thought_signature from the next function message if it exists
       const thoughtSignature =
@@ -126,17 +133,19 @@ function reformatMessagesWithThoughtSignature(
             role: "assistant",
             tool_calls: [
               {
-                id: `function-call-${uuid()}`,
+                id: makeToolCallId(),
                 type: "function",
                 function: {
                   name: function_call.name,
                   arguments: function_call.arguments,
                 },
-                extra_content: {
-                  google: {
-                    thought_signature,
+                ...(thought_signature && {
+                  extra_content: {
+                    google: {
+                      thought_signature,
+                    },
                   },
-                },
+                }),
               },
             ],
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -196,12 +205,13 @@ export default class OpenAICompatibleService implements ClientService {
     try {
       const reformattedMessages =
         reformatMessagesWithThoughtSignature(messages);
+      const normalizedTools = normalizeTools(tools);
       const response = await this.openai.chat.completions.create({
         model,
         messages: reformattedMessages,
         max_tokens,
         temperature,
-        functions: tools,
+        ...(normalizedTools && { tools: normalizedTools }),
       });
       return response as OpenAIResponse;
     } catch (error) {
