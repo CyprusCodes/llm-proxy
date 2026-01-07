@@ -1,7 +1,6 @@
 import {
   BedrockAnthropicContentType,
   BedrockAnthropicMessage,
-  OpenAIFunctionMessage,
   OpenAIMessages,
   Providers,
 } from "../types";
