@@ -22,7 +22,7 @@ interface GenerateLLMResponseParams {
   messages: Messages;
   model: string;
   functions?: any; // TODO : Fix this any more info in the ClientService.ts
-  max_tokens: number;
+  max_tokens?: number;
   temperature?: number;
   credentials: Credentials;
 }
@@ -101,7 +101,7 @@ export async function generateLLMResponse(
   const response = await service.generateCompletion({
     messages: adaptedMessages as any, // TODO: fix this any
     model,
-    max_tokens,
+    ...(typeof max_tokens === "number" ? { max_tokens } : {}),
     temperature: temperature || 0,
     tools: functions,
     systemPrompt: systemPrompt || "",
@@ -196,7 +196,7 @@ export async function generateLLMStreamResponse(
   const stream = service.generateStreamCompletion({
     messages: adaptedMessages as any, // TODO: Fix this any
     model,
-    max_tokens,
+    ...(typeof max_tokens === "number" ? { max_tokens } : {}),
     temperature: temperature || 0,
     tools: functions,
     systemPrompt: systemPrompt || "",
