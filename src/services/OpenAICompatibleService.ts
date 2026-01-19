@@ -191,7 +191,7 @@ export default class OpenAICompatibleService implements ClientService {
   }: {
     messages: OpenAIMessages;
     model: string;
-    max_tokens: number;
+    max_tokens?: number;
     temperature: number;
     systemPrompt?: string;
     tools?: any;
@@ -209,7 +209,7 @@ export default class OpenAICompatibleService implements ClientService {
       const response = await this.openai.chat.completions.create({
         model,
         messages: reformattedMessages,
-        max_tokens,
+        ...(typeof max_tokens === "number" ? { max_tokens } : {}),
         temperature,
         ...(normalizedTools && { tools: normalizedTools }),
       });
@@ -228,7 +228,7 @@ export default class OpenAICompatibleService implements ClientService {
   }: {
     messages: OpenAIMessages;
     model: string;
-    max_tokens: number;
+    max_tokens?: number;
     temperature: number;
     systemPrompt?: string;
     tools?: any;
@@ -242,7 +242,7 @@ export default class OpenAICompatibleService implements ClientService {
     const stream = await this.openai.chat.completions.create({
       model,
       messages: reformattedMessages,
-      max_tokens,
+      ...(typeof max_tokens === "number" ? { max_tokens } : {}),
       temperature,
       ...(normalizedTools && { tools: normalizedTools }),
       stream: true,

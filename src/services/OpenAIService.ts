@@ -20,7 +20,7 @@ export default class OpenAIService implements ClientService {
   }: {
     messages: OpenAIMessages;
     model: string;
-    max_tokens: number;
+    max_tokens?: number;
     temperature: number;
     systemPrompt?: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,15 +43,18 @@ export default class OpenAIService implements ClientService {
         temperature
       };
 
-      // Use max_completion_tokens for newer models (GPT-5+), fallback to max_tokens for older models
-      if (
-        model.startsWith("gpt-5") ||
-        model.startsWith("o3") ||
-        model.startsWith("o4")
-      ) {
-        requestBody.max_completion_tokens = max_tokens;
-      } else {
-        requestBody.max_tokens = max_tokens;
+      // Only include token limit when provided
+      if (typeof max_tokens === "number") {
+        // Use max_completion_tokens for newer models (GPT-5+), fallback to max_tokens for older models
+        if (
+          model.startsWith("gpt-5") ||
+          model.startsWith("o3") ||
+          model.startsWith("o4")
+        ) {
+          requestBody.max_completion_tokens = max_tokens;
+        } else {
+          requestBody.max_tokens = max_tokens;
+        }
       }
 
       // Add tools if provided (modern API, replaces deprecated functions)
@@ -88,7 +91,7 @@ export default class OpenAIService implements ClientService {
   }: {
     messages: OpenAIMessages;
     model: string;
-    max_tokens: number;
+    max_tokens?: number;
     temperature: number;
     systemPrompt?: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -116,15 +119,18 @@ export default class OpenAIService implements ClientService {
         }
       };
 
-      // Use max_completion_tokens for newer models (GPT-5+), fallback to max_tokens for older models
-      if (
-        model.startsWith("gpt-5") ||
-        model.startsWith("o3") ||
-        model.startsWith("o4")
-      ) {
-        requestBody.max_completion_tokens = max_tokens;
-      } else {
-        requestBody.max_tokens = max_tokens;
+      // Only include token limit when provided
+      if (typeof max_tokens === "number") {
+        // Use max_completion_tokens for newer models (GPT-5+), fallback to max_tokens for older models
+        if (
+          model.startsWith("gpt-5") ||
+          model.startsWith("o3") ||
+          model.startsWith("o4")
+        ) {
+          requestBody.max_completion_tokens = max_tokens;
+        } else {
+          requestBody.max_tokens = max_tokens;
+        }
       }
 
       // Add tools if provided (modern API, replaces deprecated functions)
