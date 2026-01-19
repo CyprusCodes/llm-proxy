@@ -94,7 +94,8 @@ export async function generateLLMResponse(
   // Step 2: Adapt messages and extract the system prompt
   const { adaptedMessages, systemPrompt } = InputFormatAdapter.adaptMessages(
     messages,
-    provider
+    provider,
+    model
   );
 
   // Step 3: Generate the completion
@@ -189,7 +190,8 @@ export async function generateLLMStreamResponse(
   // Step 2: Adapt messages and extract the system prompt
   const { adaptedMessages, systemPrompt } = InputFormatAdapter.adaptMessages(
     messages,
-    provider
+    provider,
+    model
   );
 
   // Step 3: Generate the streaming completion
