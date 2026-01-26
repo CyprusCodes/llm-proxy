@@ -1,3 +1,4 @@
+export { llmAsJudge } from "./utils/llmAsJudge";
 import { Messages, OpenAIResponse, Providers } from "./types";
 import OpenAIService from "./services/OpenAIService";
 import AwsBedrockAnthropicService from "./services/AwsBedrockAnthropicService";
@@ -29,7 +30,7 @@ interface GenerateLLMResponseParams {
 
 // Main function for non-streaming requests
 export async function generateLLMResponse(
-  params: GenerateLLMResponseParams
+  params: GenerateLLMResponseParams,
 ): Promise<OpenAIResponse> {
   const { messages, model, functions, max_tokens, temperature, credentials } =
     params;
@@ -50,7 +51,7 @@ export async function generateLLMResponse(
   if (provider === Providers.OPENAI) {
     if (!credentials.apiKey) {
       return Promise.reject(
-        new Error("OpenAI API key is required for OpenAI models.")
+        new Error("OpenAI API key is required for OpenAI models."),
       );
     }
     service = new OpenAIService(credentials.apiKey);
@@ -58,32 +59,32 @@ export async function generateLLMResponse(
     const { awsConfig } = credentials;
     if (!awsConfig) {
       return Promise.reject(
-        new Error("AWS credentials are required for Bedrock models.")
+        new Error("AWS credentials are required for Bedrock models."),
       );
     }
     service = new AwsBedrockAnthropicService(
       awsConfig.accessKeyId,
       awsConfig.secretAccessKey,
-      awsConfig.region
+      awsConfig.region,
     );
   } else if (provider === Providers.LLAMA_3_1_BEDROCK) {
     const { awsConfig } = credentials;
     if (!awsConfig) {
       return Promise.reject(
-        new Error("AWS credentials are required for Bedrock models.")
+        new Error("AWS credentials are required for Bedrock models."),
       );
     }
     service = new AwsBedrockLlama3Service(
       awsConfig.accessKeyId,
       awsConfig.secretAccessKey,
-      awsConfig.region
+      awsConfig.region,
     );
   } else if (provider === Providers.OPENAI_COMPATIBLE_PROVIDER) {
     if (!openAICompatibleProviderKey || !baseUrl) {
       return Promise.reject(
         new Error(
-          "OpenAI Compatible Provider key and base URL are required for OpenAI Compatible models."
-        )
+          "OpenAI Compatible Provider key and base URL are required for OpenAI Compatible models.",
+        ),
       );
     }
     service = new OpenAICompatibleService(openAICompatibleProviderKey, baseUrl);
@@ -95,7 +96,7 @@ export async function generateLLMResponse(
   const { adaptedMessages, systemPrompt } = InputFormatAdapter.adaptMessages(
     messages,
     provider,
-    model
+    model,
   );
 
   // Step 3: Generate the completion
@@ -125,7 +126,7 @@ export async function generateLLMResponse(
 // Main function for streaming requests
 // Main function for streaming requests
 export async function generateLLMStreamResponse(
-  params: GenerateLLMResponseParams
+  params: GenerateLLMResponseParams,
 ): Promise<AsyncGenerator<OpenAIResponse>> {
   const { messages, model, functions, max_tokens, temperature, credentials } =
     params;
@@ -146,7 +147,7 @@ export async function generateLLMStreamResponse(
   if (provider === Providers.OPENAI) {
     if (!credentials.apiKey) {
       return Promise.reject(
-        new Error("OpenAI API key is required for OpenAI models.")
+        new Error("OpenAI API key is required for OpenAI models."),
       );
     }
     service = new OpenAIService(credentials.apiKey);
@@ -154,32 +155,32 @@ export async function generateLLMStreamResponse(
     const { awsConfig } = credentials;
     if (!awsConfig) {
       return Promise.reject(
-        new Error("AWS credentials are required for Bedrock models.")
+        new Error("AWS credentials are required for Bedrock models."),
       );
     }
     service = new AwsBedrockAnthropicService(
       awsConfig.accessKeyId,
       awsConfig.secretAccessKey,
-      awsConfig.region
+      awsConfig.region,
     );
   } else if (provider === Providers.LLAMA_3_1_BEDROCK) {
     const { awsConfig } = credentials;
     if (!awsConfig) {
       return Promise.reject(
-        new Error("AWS credentials are required for Bedrock models.")
+        new Error("AWS credentials are required for Bedrock models."),
       );
     }
     service = new AwsBedrockLlama3Service(
       awsConfig.accessKeyId,
       awsConfig.secretAccessKey,
-      awsConfig.region
+      awsConfig.region,
     );
   } else if (provider === Providers.OPENAI_COMPATIBLE_PROVIDER) {
     if (!openAICompatibleProviderKey || !baseUrl) {
       return Promise.reject(
         new Error(
-          "OpenAI Compatible Provider key and base URL are required for OpenAI Compatible models."
-        )
+          "OpenAI Compatible Provider key and base URL are required for OpenAI Compatible models.",
+        ),
       );
     }
     service = new OpenAICompatibleService(openAICompatibleProviderKey, baseUrl);
@@ -191,7 +192,7 @@ export async function generateLLMStreamResponse(
   const { adaptedMessages, systemPrompt } = InputFormatAdapter.adaptMessages(
     messages,
     provider,
-    model
+    model,
   );
 
   // Step 3: Generate the streaming completion
