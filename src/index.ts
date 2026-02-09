@@ -1,6 +1,7 @@
 export { llmAsJudge } from "./utils/llmAsJudge";
 import { Messages, OpenAIResponse, Providers } from "./types";
 import OpenAIService from "./services/OpenAIService";
+import AnthropicService from "./services/AnthropicService";
 import AwsBedrockAnthropicService from "./services/AwsBedrockAnthropicService";
 import ProviderFinder from "./middleware/ProviderFinder";
 import InputFormatAdapter from "./middleware/InputFormatAdapter";
@@ -45,6 +46,7 @@ export async function generateLLMResponse(
   // Initialize the correct service based on the provider
   let service:
     | OpenAIService
+    | AnthropicService
     | AwsBedrockAnthropicService
     | AwsBedrockLlama3Service
     | OpenAICompatibleService;
@@ -55,6 +57,13 @@ export async function generateLLMResponse(
       );
     }
     service = new OpenAIService(credentials.apiKey);
+  } else if (provider === Providers.ANTHROPIC) {
+    if (!credentials.apiKey) {
+      return Promise.reject(
+        new Error("Anthropic API key is required for Anthropic models."),
+      );
+    }
+    service = new AnthropicService(credentials.apiKey);
   } else if (provider === Providers.ANTHROPIC_BEDROCK) {
     const { awsConfig } = credentials;
     if (!awsConfig) {
@@ -114,7 +123,7 @@ export async function generateLLMResponse(
     provider === Providers.OPENAI ||
     provider === Providers.OPENAI_COMPATIBLE_PROVIDER
       ? response
-      : OutputFormatAdapter.adaptResponse({
+      : await OutputFormatAdapter.adaptResponse({
           response,
           provider,
           isStream: false,
@@ -141,6 +150,7 @@ export async function generateLLMStreamResponse(
   // Initialize the correct service based on the provider
   let service:
     | OpenAIService
+    | AnthropicService
     | AwsBedrockAnthropicService
     | AwsBedrockLlama3Service
     | OpenAICompatibleService;
@@ -151,6 +161,13 @@ export async function generateLLMStreamResponse(
       );
     }
     service = new OpenAIService(credentials.apiKey);
+  } else if (provider === Providers.ANTHROPIC) {
+    if (!credentials.apiKey) {
+      return Promise.reject(
+        new Error("Anthropic API key is required for Anthropic models."),
+      );
+    }
+    service = new AnthropicService(credentials.apiKey);
   } else if (provider === Providers.ANTHROPIC_BEDROCK) {
     const { awsConfig } = credentials;
     if (!awsConfig) {

@@ -1,4 +1,5 @@
 import {
+  AnthropicSupportedLLMs,
   BedrockAnthropicSupportedLLMs,
   Llama3_1SupportedLLMs,
   OpenAISupportedLLMs,
@@ -12,6 +13,14 @@ export default class ProviderFinder {
       Object.values(OpenAISupportedLLMs).includes(model as OpenAISupportedLLMs)
     ) {
       return Providers.OPENAI;
+    }
+    // Check if the model belongs to direct Anthropic API-supported LLMs
+    if (
+      Object.values(AnthropicSupportedLLMs).includes(
+        model as AnthropicSupportedLLMs
+      )
+    ) {
+      return Providers.ANTHROPIC;
     }
     // Check if the model belongs to Bedrock Anthropic-supported LLMs
     if (

@@ -301,6 +301,7 @@ export default class InputFormatAdapter {
           }) as OpenAIMessages,
         };
 
+      case Providers.ANTHROPIC:
       case Providers.ANTHROPIC_BEDROCK: {
         if (!messages.length) {
           throw new Error("Messages array cannot be empty for Anthropic.");

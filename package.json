@@ -31,6 +31,7 @@
     "typescript": "^5.6.3"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.31.0",
     "@anthropic-ai/bedrock-sdk": "^0.11.1",
     "aws-sdk": "^2.1691.0",
     "axios": "^1.7.7",

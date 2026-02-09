@@ -1,6 +1,7 @@
 // GENERAL
 export enum Providers {
   OPENAI = "OpenAI",
+  ANTHROPIC = "Anthropic",
   ANTHROPIC_BEDROCK = "AnthropicBedrock",
   LLAMA_3_1_BEDROCK = "Llama3.1",
   OPENAI_COMPATIBLE_PROVIDER = "OpenAICompatibleProvider",
@@ -183,6 +184,22 @@ export interface OpenAIResponse {
     };
   };
   system_fingerprint: string;
+}
+
+// ANTHROPIC (direct API)
+
+// https://docs.anthropic.com/en/api/models-list
+export enum AnthropicSupportedLLMs {
+  CLAUDE_OPUS_4_6 = "claude-opus-4-6",
+  CLAUDE_3_5_SONNET_20241022 = "claude-3-5-sonnet-20241022",
+  CLAUDE_3_5_HAIKU_20241022 = "claude-3-5-haiku-20241022",
+  CLAUDE_3_OPUS_20240229 = "claude-3-opus-20240229",
+  CLAUDE_3_SONNET_20240229 = "claude-3-sonnet-20240229",
+  CLAUDE_3_HAIKU_20240307 = "claude-3-haiku-20240307",
+  CLAUDE_3_5_SONNET_20240620 = "claude-3-5-sonnet-20240620",
+  CLAUDE_2_1 = "claude-2.1",
+  CLAUDE_2 = "claude-2",
+  CLAUDE_INSTANT_1_2 = "claude-instant-1.2",
 }
 
 // AWS BEDROCK

@@ -40,10 +40,11 @@ export default class OutputFormatAdapter {
         case Providers.OPENAI_COMPATIBLE_PROVIDER:
           return response as LLMResponse;
         case Providers.ANTHROPIC_BEDROCK:
+        case Providers.ANTHROPIC:
           if (!isStream) {
             return this.adaptCompleteResponse(response);
           }
-          return this.adaptStreamingResponse(response);
+          return this.adaptStreamingResponse(response, provider);
 
         case Providers.LLAMA_3_1_BEDROCK: {
           if (!isStream && !isFunctionCall) {
@@ -125,8 +126,16 @@ export default class OutputFormatAdapter {
     }
   }
 
-  private static adaptStreamingResponse(chunk: any): any {
+  private static adaptStreamingResponse(chunk: any, provider?: Providers): any {
     const metrics = chunk["amazon-bedrock-invocationMetrics"];
+    const anthropicUsage =
+      provider === Providers.ANTHROPIC && chunk.usage
+        ? {
+            inputTokenCount: chunk.usage.input_tokens ?? 0,
+            outputTokenCount: chunk.usage.output_tokens ?? 0,
+          }
+        : null;
+    const usageForStop = anthropicUsage ?? metrics;
     const isStop =
       chunk.type === "content_block_stop" || chunk.type === "message_stop";
 
@@ -155,8 +164,8 @@ export default class OutputFormatAdapter {
     // Handle the end of the stream
     if (isStop) {
       const response = this.isToolUseStream
-        ? this.createToolUseResponse(metrics, isStop)
-        : this.createNonToolUseResponse(metrics, isStop, chunk);
+        ? this.createToolUseResponse(usageForStop, isStop)
+        : this.createNonToolUseResponse(usageForStop, isStop, chunk);
 
       // Reset state after processing the end of the stream
       this.resetState();
@@ -166,15 +175,17 @@ export default class OutputFormatAdapter {
 
     // Handle intermediate chunks (non-stop chunks)
     return this.isToolUseStream
-      ? this.createToolUseResponse(metrics, isStop, chunk)
-      : this.createNonToolUseResponse(metrics, isStop, chunk);
+      ? this.createToolUseResponse(usageForStop, isStop, chunk)
+      : this.createNonToolUseResponse(usageForStop, isStop, chunk);
   }
 
   private static createToolUseResponse(
-    metrics: any,
+    metricsOrUsage: any,
     isStop: boolean,
     chunk?: any
   ): any {
+    const inputTokens = metricsOrUsage?.inputTokenCount ?? 0;
+    const outputTokens = metricsOrUsage?.outputTokenCount ?? 0;
     return {
       id: `stream-${Date.now()}`,
       object: "chat.completion.chunk",
@@ -201,11 +212,9 @@ export default class OutputFormatAdapter {
       ],
       usage: isStop
         ? {
-            prompt_tokens: metrics?.inputTokenCount || 0,
-            completion_tokens: metrics?.outputTokenCount || 0,
-            total_tokens:
-              (metrics?.inputTokenCount || 0) +
-              (metrics?.outputTokenCount || 0),
+            prompt_tokens: inputTokens,
+            completion_tokens: outputTokens,
+            total_tokens: inputTokens + outputTokens,
             prompt_tokens_details: {
               cached_tokens: 0
             },
@@ -218,11 +227,13 @@ export default class OutputFormatAdapter {
   }
 
   private static createNonToolUseResponse(
-    metrics: any,
+    metricsOrUsage: any,
     isStop: boolean,
     chunk: any
   ): any {
     const content = chunk.content_block?.text || chunk.delta?.text || "";
+    const inputTokens = metricsOrUsage?.inputTokenCount ?? 0;
+    const outputTokens = metricsOrUsage?.outputTokenCount ?? 0;
     return {
       id: `stream-${Date.now()}`,
       object: "chat.completion.chunk",
@@ -240,11 +251,9 @@ export default class OutputFormatAdapter {
       ],
       usage: isStop
         ? {
-            prompt_tokens: metrics?.inputTokenCount || 0,
-            completion_tokens: metrics?.outputTokenCount || 0,
-            total_tokens:
-              (metrics?.inputTokenCount || 0) +
-              (metrics?.outputTokenCount || 0),
+            prompt_tokens: inputTokens,
+            completion_tokens: outputTokens,
+            total_tokens: inputTokens + outputTokens,
             prompt_tokens_details: {
               cached_tokens: 0
             },
