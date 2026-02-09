@@ -2,10 +2,65 @@ import Anthropic from "@anthropic-ai/sdk";
 import {
   BedrockAnthropicParsedChunk,
   BedrockAnthropicResponse,
-  Messages,
+  Messages
 } from "../types";
 import { ClientService } from "./ClientService";
-import replaceKeyInObjects from "../utils/servicesUtils/replaceObjectKey";
+
+const DEFAULT_INPUT_SCHEMA = {
+  type: "object" as const,
+  properties: {},
+  required: [] as string[]
+};
+
+/**
+ * Converts OpenAI tool format to Anthropic tool format.
+ *
+ * OpenAI:    { type: "function", function: { name, description, parameters } }
+ * Anthropic: { type: "custom",   name, description, input_schema }
+ *
+ * Also handles tools that are already in Anthropic format or a mixed shape.
+ */
+function convertToolsToAnthropicFormat(
+  tools: any[] | undefined | null
+): Anthropic.Tool[] {
+  if (!tools || !Array.isArray(tools) || tools.length === 0) {
+    return [];
+  }
+
+  return tools.map((tool: any) => {
+    // Already in Anthropic format
+    if (
+      tool.type === "custom" ||
+      (tool.name && tool.description && !tool.function)
+    ) {
+      return {
+        type: "custom",
+        name: tool.name,
+        description: tool.description || "",
+        input_schema:
+          tool.input_schema || tool.parameters || DEFAULT_INPUT_SCHEMA
+      } as Anthropic.Tool;
+    }
+
+    // Standard OpenAI format → convert
+    if (tool.type === "function" && tool.function) {
+      const { name, description, parameters } = tool.function;
+      return {
+        type: "custom",
+        name,
+        description: description || "",
+        input_schema: parameters || DEFAULT_INPUT_SCHEMA
+      } as Anthropic.Tool;
+    }
+
+    // Unknown shape — best-effort conversion
+    return {
+      ...tool,
+      type: "custom",
+      input_schema: tool.input_schema || tool.parameters || DEFAULT_INPUT_SCHEMA
+    } as Anthropic.Tool;
+  });
+}
 
 export default class AnthropicService implements ClientService {
   private client: Anthropic;
@@ -19,28 +74,24 @@ export default class AnthropicService implements ClientService {
     model?: string;
     max_tokens?: number;
     temperature?: number;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tools?: any;
     systemPrompt?: string;
   }): Promise<BedrockAnthropicResponse> {
-    const { messages, model, max_tokens, temperature, systemPrompt, tools } =
-      params;
+    const {
+      messages,
+      model,
+      max_tokens,
+      temperature,
+      systemPrompt,
+      tools
+    } = params;
 
     if (!model) {
-      return Promise.reject(
-        new Error("Model ID is required for AnthropicService")
-      );
+      throw new Error("Model ID is required for AnthropicService");
     }
 
-    const validatedTools = replaceKeyInObjects(
-      tools,
-      "parameters",
-      "input_schema"
-    ) as unknown as Anthropic.Tool[] | undefined;
-    const hasTools =
-      validatedTools &&
-      Array.isArray(validatedTools) &&
-      validatedTools.length > 0;
+    const validatedTools = convertToolsToAnthropicFormat(tools);
+    const hasTools = validatedTools.length > 0;
 
     const createParams: Anthropic.MessageCreateParamsNonStreaming = {
       model,
@@ -48,42 +99,36 @@ export default class AnthropicService implements ClientService {
       temperature: temperature ?? 0,
       system: systemPrompt ?? "",
       messages: messages as Anthropic.MessageParam[],
-      ...(hasTools ? { tools: validatedTools } : {}),
+      ...(hasTools ? { tools: validatedTools } : {})
     };
 
     const response = await this.client.messages.create(createParams);
-
-    return response as unknown as BedrockAnthropicResponse;
+    return (response as unknown) as BedrockAnthropicResponse;
   }
 
-  // eslint-disable-next-line consistent-return
   async *generateStreamCompletion(params: {
     messages: Messages;
     model?: string;
     max_tokens?: number;
     temperature?: number;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tools?: any;
     systemPrompt?: string;
   }): AsyncGenerator<BedrockAnthropicParsedChunk, void, unknown> {
-    const { messages, model, max_tokens, temperature, tools, systemPrompt } =
-      params;
+    const {
+      messages,
+      model,
+      max_tokens,
+      temperature,
+      tools,
+      systemPrompt
+    } = params;
 
     if (!model) {
-      return Promise.reject(
-        new Error("Model ID is required for AnthropicService")
-      );
+      throw new Error("Model ID is required for AnthropicService");
     }
 
-    const validatedTools = replaceKeyInObjects(
-      tools,
-      "parameters",
-      "input_schema"
-    ) as unknown as Anthropic.Tool[] | undefined;
-    const hasTools =
-      validatedTools &&
-      Array.isArray(validatedTools) &&
-      validatedTools.length > 0;
+    const validatedTools = convertToolsToAnthropicFormat(tools);
+    const hasTools = validatedTools.length > 0;
 
     const createParams: Anthropic.MessageCreateParamsStreaming = {
       model,
@@ -92,7 +137,7 @@ export default class AnthropicService implements ClientService {
       system: systemPrompt ?? "",
       messages: messages as Anthropic.MessageParam[],
       stream: true,
-      ...(hasTools ? { tools: validatedTools } : {}),
+      ...(hasTools ? { tools: validatedTools } : {})
     };
 
     const stream = await this.client.messages.create(createParams);
@@ -114,13 +159,13 @@ export default class AnthropicService implements ClientService {
           type: "message_stop",
           usage: {
             input_tokens: inputTokens,
-            output_tokens: outputTokens,
-          },
+            output_tokens: outputTokens
+          }
         } as BedrockAnthropicParsedChunk;
         return;
       }
 
-      yield event as unknown as BedrockAnthropicParsedChunk;
+      yield (event as unknown) as BedrockAnthropicParsedChunk;
     }
   }
 }
