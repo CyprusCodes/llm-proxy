@@ -1,6 +1,6 @@
-export { llmAsJudge } from "./utils/llmAsJudge";
 import { Messages, OpenAIResponse, Providers } from "./types";
 import OpenAIService from "./services/OpenAIService";
+import AnthropicService from "./services/AnthropicService";
 import AwsBedrockAnthropicService from "./services/AwsBedrockAnthropicService";
 import ProviderFinder from "./middleware/ProviderFinder";
 import InputFormatAdapter from "./middleware/InputFormatAdapter";
@@ -8,7 +8,8 @@ import OutputFormatAdapter from "./middleware/OutputFormatAdapter";
 import AwsBedrockLlama3Service from "./services/AwsBedrockLlama3Service";
 import OpenAICompatibleService from "./services/OpenAICompatibleService";
 
-// Define the credentials interface for flexibility
+export { llmAsJudge } from "./utils/llmAsJudge";
+
 interface Credentials {
   apiKey?: string;
   awsConfig?: { accessKeyId: string; secretAccessKey: string; region: string };
@@ -18,195 +19,282 @@ interface Credentials {
   };
 }
 
-// Define the input parameters interface for flexibility
 interface GenerateLLMResponseParams {
   messages: Messages;
   model: string;
-  functions?: any; // TODO : Fix this any more info in the ClientService.ts
+  functions?: any; // TODO: align naming — this is "tools" everywhere else
   max_tokens?: number;
   temperature?: number;
   credentials: Credentials;
 }
 
-// Main function for non-streaming requests
-export async function generateLLMResponse(
-  params: GenerateLLMResponseParams,
-): Promise<OpenAIResponse> {
-  const { messages, model, functions, max_tokens, temperature, credentials } =
-    params;
+type ServiceInstance =
+  | OpenAIService
+  | AnthropicService
+  | AwsBedrockAnthropicService
+  | AwsBedrockLlama3Service
+  | OpenAICompatibleService;
 
-  const { openAICompatibleProviderConfig } = credentials;
-  const { openAICompatibleProviderKey, baseUrl } =
-    openAICompatibleProviderConfig || {};
+function createService(
+  provider: Providers,
+  credentials: Credentials
+): ServiceInstance {
+  switch (provider) {
+    case Providers.OPENAI: {
+      if (!credentials.apiKey) {
+        throw new Error("OpenAI API key is required for OpenAI models.");
+      }
+      return new OpenAIService(credentials.apiKey);
+    }
+    case Providers.ANTHROPIC: {
+      if (!credentials.apiKey) {
+        throw new Error("Anthropic API key is required for Anthropic models.");
+      }
+      return new AnthropicService(credentials.apiKey);
+    }
+    case Providers.ANTHROPIC_BEDROCK: {
+      const { awsConfig } = credentials;
+      if (!awsConfig) {
+        throw new Error("AWS credentials are required for Bedrock models.");
+      }
+      return new AwsBedrockAnthropicService(
+        awsConfig.accessKeyId,
+        awsConfig.secretAccessKey,
+        awsConfig.region
+      );
+    }
+    case Providers.LLAMA_3_1_BEDROCK: {
+      const { awsConfig } = credentials;
+      if (!awsConfig) {
+        throw new Error("AWS credentials are required for Bedrock models.");
+      }
+      return new AwsBedrockLlama3Service(
+        awsConfig.accessKeyId,
+        awsConfig.secretAccessKey,
+        awsConfig.region
+      );
+    }
+    case Providers.OPENAI_COMPATIBLE_PROVIDER: {
+      const config = credentials.openAICompatibleProviderConfig;
+      if (!config?.openAICompatibleProviderKey || !config?.baseUrl) {
+        throw new Error(
+          "OpenAI Compatible Provider key and base URL are required."
+        );
+      }
+      return new OpenAICompatibleService(
+        config.openAICompatibleProviderKey,
+        config.baseUrl
+      );
+    }
+    default:
+      throw new Error(`Unsupported provider: ${provider}`);
+  }
+}
 
-  // Step 1: Identify the provider based on the model
-  const provider = ProviderFinder.getProvider(model, baseUrl);
+function reconstructAnthropicResponse(chunks: any[]): any {
+  let id = "";
+  let model = "";
+  const contentBlocks: any[] = [];
+  let stopReason = "";
+  let inputTokens = 0;
+  let outputTokens = 0;
 
-  // Initialize the correct service based on the provider
-  let service:
-    | OpenAIService
-    | AwsBedrockAnthropicService
-    | AwsBedrockLlama3Service
-    | OpenAICompatibleService;
-  if (provider === Providers.OPENAI) {
-    if (!credentials.apiKey) {
-      return Promise.reject(
-        new Error("OpenAI API key is required for OpenAI models."),
-      );
+  let currentBlock: any = null;
+  let currentToolArgs: string[] = [];
+
+  for (const chunk of chunks) {
+    if (chunk.type === "message_start" && chunk.message) {
+      id = chunk.message.id || id;
+      model = chunk.message.model || model;
+      inputTokens = chunk.message.usage?.input_tokens ?? inputTokens;
+      outputTokens = chunk.message.usage?.output_tokens ?? outputTokens;
     }
-    service = new OpenAIService(credentials.apiKey);
-  } else if (provider === Providers.ANTHROPIC_BEDROCK) {
-    const { awsConfig } = credentials;
-    if (!awsConfig) {
-      return Promise.reject(
-        new Error("AWS credentials are required for Bedrock models."),
-      );
+
+    if (chunk.type === "content_block_start" && chunk.content_block) {
+      currentBlock = { ...chunk.content_block };
+      currentToolArgs = [];
     }
-    service = new AwsBedrockAnthropicService(
-      awsConfig.accessKeyId,
-      awsConfig.secretAccessKey,
-      awsConfig.region,
-    );
-  } else if (provider === Providers.LLAMA_3_1_BEDROCK) {
-    const { awsConfig } = credentials;
-    if (!awsConfig) {
-      return Promise.reject(
-        new Error("AWS credentials are required for Bedrock models."),
-      );
+
+    if (chunk.type === "content_block_delta") {
+      if (chunk.delta?.type === "text_delta" && currentBlock?.type === "text") {
+        currentBlock.text =
+          (currentBlock.text || "") + (chunk.delta.text || "");
+      }
+      if (
+        chunk.delta?.type === "input_json_delta" &&
+        chunk.delta?.partial_json
+      ) {
+        currentToolArgs.push(chunk.delta.partial_json);
+      }
     }
-    service = new AwsBedrockLlama3Service(
-      awsConfig.accessKeyId,
-      awsConfig.secretAccessKey,
-      awsConfig.region,
-    );
-  } else if (provider === Providers.OPENAI_COMPATIBLE_PROVIDER) {
-    if (!openAICompatibleProviderKey || !baseUrl) {
-      return Promise.reject(
-        new Error(
-          "OpenAI Compatible Provider key and base URL are required for OpenAI Compatible models.",
-        ),
-      );
+
+    if (chunk.type === "content_block_stop" && currentBlock) {
+      if (currentBlock.type === "tool_use") {
+        try {
+          currentBlock.input = JSON.parse(currentToolArgs.join(""));
+        } catch {
+          currentBlock.input = {};
+        }
+      }
+      contentBlocks.push(currentBlock);
+      currentBlock = null;
     }
-    service = new OpenAICompatibleService(openAICompatibleProviderKey, baseUrl);
-  } else {
-    return Promise.reject(new Error("Unsupported provider 4"));
+
+    if (chunk.type === "message_delta") {
+      stopReason = chunk.delta?.stop_reason || stopReason;
+      outputTokens = chunk.usage?.output_tokens ?? outputTokens;
+    }
+
+    if (chunk.type === "message_stop" && chunk.usage) {
+      inputTokens = chunk.usage.input_tokens ?? inputTokens;
+      outputTokens = chunk.usage.output_tokens ?? outputTokens;
+    }
+
+    // Handle AWS Bedrock metrics format
+    const metrics = chunk["amazon-bedrock-invocationMetrics"];
+    if (metrics) {
+      inputTokens = metrics.inputTokenCount ?? inputTokens;
+      outputTokens = metrics.outputTokenCount ?? outputTokens;
+    }
   }
 
-  // Step 2: Adapt messages and extract the system prompt
+  return {
+    id,
+    type: "message",
+    role: "assistant",
+    model,
+    content: contentBlocks,
+    stop_reason: stopReason,
+    usage: { input_tokens: inputTokens, output_tokens: outputTokens }
+  };
+}
+
+function anthropicToolCallToStreamChunk(
+  completeResponse: any,
+  toolUseBlock: any
+): OpenAIResponse {
+  const argumentsString =
+    typeof toolUseBlock.input === "string"
+      ? toolUseBlock.input
+      : JSON.stringify(toolUseBlock.input);
+
+  return ({
+    id: completeResponse.id || `anthropic-${Date.now()}`,
+    object: "chat.completion.chunk",
+    created: Date.now(),
+    model: completeResponse.model,
+    system_fingerprint: "default_fingerprint",
+    choices: [
+      {
+        index: 0,
+        delta: {
+          function_call: {
+            name: toolUseBlock.name,
+            arguments: argumentsString
+          }
+        },
+        logprobs: null,
+        finish_reason: "stop"
+      }
+    ],
+    usage: {
+      prompt_tokens: completeResponse.usage?.input_tokens || 0,
+      completion_tokens: completeResponse.usage?.output_tokens || 0,
+      total_tokens:
+        (completeResponse.usage?.input_tokens || 0) +
+        (completeResponse.usage?.output_tokens || 0),
+      prompt_tokens_details: { cached_tokens: 0 },
+      completion_tokens_details: { reasoning_tokens: 0 }
+    }
+  } as unknown) as OpenAIResponse;
+}
+
+export async function generateLLMResponse(
+  params: GenerateLLMResponseParams
+): Promise<OpenAIResponse> {
+  const {
+    messages,
+    model,
+    functions,
+    max_tokens,
+    temperature,
+    credentials
+  } = params;
+
+  const { openAICompatibleProviderConfig } = credentials;
+  const { baseUrl } = openAICompatibleProviderConfig || {};
+
+  const provider = ProviderFinder.getProvider(model, baseUrl);
+  const service = createService(provider, credentials);
+
   const { adaptedMessages, systemPrompt } = InputFormatAdapter.adaptMessages(
     messages,
     provider,
-    model,
+    model
   );
 
-  // Step 3: Generate the completion
   const response = await service.generateCompletion({
-    messages: adaptedMessages as any, // TODO: fix this any
+    messages: adaptedMessages as any,
     model,
     ...(typeof max_tokens === "number" ? { max_tokens } : {}),
     temperature: temperature || 0,
     tools: functions,
-    systemPrompt: systemPrompt || "",
+    systemPrompt: systemPrompt || ""
   });
 
-  // Step 4: Adapt the response if needed
-  const adaptedResponse =
+  // OpenAI responses are already in the right format
+  const isOpenAIFormat =
     provider === Providers.OPENAI ||
-    provider === Providers.OPENAI_COMPATIBLE_PROVIDER
-      ? response
-      : OutputFormatAdapter.adaptResponse({
-          response,
-          provider,
-          isStream: false,
-        });
+    provider === Providers.OPENAI_COMPATIBLE_PROVIDER;
+
+  if (isOpenAIFormat) {
+    return response as OpenAIResponse;
+  }
+
+  const adaptedResponse = await OutputFormatAdapter.adaptResponse({
+    response,
+    provider,
+    isStream: false
+  });
   return adaptedResponse as OpenAIResponse;
 }
 
-// Main function for streaming requests
-// Main function for streaming requests
-// Main function for streaming requests
+/** Streaming LLM completion. Returns an async generator of OpenAI-format chunks. */
 export async function generateLLMStreamResponse(
-  params: GenerateLLMResponseParams,
+  params: GenerateLLMResponseParams
 ): Promise<AsyncGenerator<OpenAIResponse>> {
-  const { messages, model, functions, max_tokens, temperature, credentials } =
-    params;
+  const {
+    messages,
+    model,
+    functions,
+    max_tokens,
+    temperature,
+    credentials
+  } = params;
 
   const { openAICompatibleProviderConfig } = credentials;
-  const { openAICompatibleProviderKey, baseUrl } =
-    openAICompatibleProviderConfig || {};
+  const { baseUrl } = openAICompatibleProviderConfig || {};
 
-  // Step 1: Identify the provider based on the model
   const provider = ProviderFinder.getProvider(model, baseUrl);
+  const service = createService(provider, credentials);
 
-  // Initialize the correct service based on the provider
-  let service:
-    | OpenAIService
-    | AwsBedrockAnthropicService
-    | AwsBedrockLlama3Service
-    | OpenAICompatibleService;
-  if (provider === Providers.OPENAI) {
-    if (!credentials.apiKey) {
-      return Promise.reject(
-        new Error("OpenAI API key is required for OpenAI models."),
-      );
-    }
-    service = new OpenAIService(credentials.apiKey);
-  } else if (provider === Providers.ANTHROPIC_BEDROCK) {
-    const { awsConfig } = credentials;
-    if (!awsConfig) {
-      return Promise.reject(
-        new Error("AWS credentials are required for Bedrock models."),
-      );
-    }
-    service = new AwsBedrockAnthropicService(
-      awsConfig.accessKeyId,
-      awsConfig.secretAccessKey,
-      awsConfig.region,
-    );
-  } else if (provider === Providers.LLAMA_3_1_BEDROCK) {
-    const { awsConfig } = credentials;
-    if (!awsConfig) {
-      return Promise.reject(
-        new Error("AWS credentials are required for Bedrock models."),
-      );
-    }
-    service = new AwsBedrockLlama3Service(
-      awsConfig.accessKeyId,
-      awsConfig.secretAccessKey,
-      awsConfig.region,
-    );
-  } else if (provider === Providers.OPENAI_COMPATIBLE_PROVIDER) {
-    if (!openAICompatibleProviderKey || !baseUrl) {
-      return Promise.reject(
-        new Error(
-          "OpenAI Compatible Provider key and base URL are required for OpenAI Compatible models.",
-        ),
-      );
-    }
-    service = new OpenAICompatibleService(openAICompatibleProviderKey, baseUrl);
-  } else {
-    return Promise.reject(new Error("Unsupported provider"));
-  }
-
-  // Step 2: Adapt messages and extract the system prompt
   const { adaptedMessages, systemPrompt } = InputFormatAdapter.adaptMessages(
     messages,
     provider,
-    model,
+    model
   );
 
-  // Step 3: Generate the streaming completion
   const stream = service.generateStreamCompletion({
-    messages: adaptedMessages as any, // TODO: Fix this any
+    messages: adaptedMessages as any,
     model,
     ...(typeof max_tokens === "number" ? { max_tokens } : {}),
     temperature: temperature || 0,
     tools: functions,
-    systemPrompt: systemPrompt || "",
+    systemPrompt: systemPrompt || ""
   });
 
-  // Step 4: Create and return the async generator
   async function* streamGenerator(): AsyncGenerator<OpenAIResponse> {
+    // OpenAI / OpenAI-compatible — pass through as-is
     const isOpenAIFormat =
       provider === Providers.OPENAI ||
       provider === Providers.OPENAI_COMPATIBLE_PROVIDER;
@@ -218,72 +306,98 @@ export async function generateLLMStreamResponse(
       return;
     }
 
-    // Buffering logic for Bedrock providers
-    const buffer: any[] = []; // Buffer to hold the first three chunks
+    if (
+      provider === Providers.ANTHROPIC ||
+      provider === Providers.ANTHROPIC_BEDROCK
+    ) {
+      const allChunks: any[] = [];
+      let hasToolUse = false;
+
+      for await (const chunk of stream) {
+        allChunks.push(chunk);
+        if (
+          chunk.type === "content_block_start" &&
+          chunk.content_block?.type === "tool_use"
+        ) {
+          hasToolUse = true;
+        }
+      }
+
+      if (hasToolUse) {
+        const completeResponse = reconstructAnthropicResponse(allChunks);
+        const toolUseBlock = completeResponse.content.find(
+          (block: any) => block.type === "tool_use"
+        );
+        if (toolUseBlock) {
+          yield anthropicToolCallToStreamChunk(completeResponse, toolUseBlock);
+        }
+      } else {
+        // Text-only: yield each chunk through the streaming adapter
+        for (const chunk of allChunks) {
+          yield (await OutputFormatAdapter.adaptResponse({
+            response: chunk,
+            provider,
+            isStream: true
+          })) as OpenAIResponse;
+        }
+      }
+      return;
+    }
+
+    // Llama 3.1 Bedrock — buffer first 3 chunks to detect function calls
+    // via the `<function>` marker in the generation text.
+    const buffer: any[] = [];
     let isFunctionCall = false;
-    const accumulatedChunks: any[] = []; // Accumulate chunks for function calls
+    const accumulatedChunks: any[] = [];
 
     for await (const chunk of stream) {
       if (!isFunctionCall) {
-        // Push the chunk to the buffer
         buffer.push(chunk);
 
-        // Check condition if we have the first three chunks
         if (buffer.length === 3) {
           const [first, second, third] = buffer;
 
-          // Evaluate the condition
           if (second.generation === "<" && third.generation === "function") {
             isFunctionCall = true;
           }
 
-          // Clear the buffer if condition met, else continue streaming
           if (isFunctionCall) {
             accumulatedChunks.push(...buffer);
             buffer.length = 0;
           } else {
-            // Yield the first chunk
             yield (await OutputFormatAdapter.adaptResponse({
               response: first,
               provider,
               isStream: true,
-              isFunctionCall: false,
+              isFunctionCall: false
             })) as OpenAIResponse;
-
-            buffer.shift(); // Remove the first chunk from the buffer
+            buffer.shift();
           }
         }
       } else {
-        // Accumulate chunks for function call
         accumulatedChunks.push(chunk);
       }
     }
 
     if (isFunctionCall) {
-      // Pass the entire accumulated response to adaptResponse
       const fullResponse = accumulatedChunks.reduce((acc, cur) => {
         acc.generation += cur.generation;
         return acc;
       });
-
-      const response = (await OutputFormatAdapter.adaptResponse({
+      yield (await OutputFormatAdapter.adaptResponse({
         response: fullResponse,
         provider,
         isStream: false,
-        isFunctionCall: true,
+        isFunctionCall: true
       })) as OpenAIResponse;
-
-      yield response;
     } else {
-      // Handle any remaining chunks in the buffer for non-function calls
       while (buffer.length > 0) {
         const chunk = buffer.shift();
-        const response = (await OutputFormatAdapter.adaptResponse({
+        yield (await OutputFormatAdapter.adaptResponse({
           response: chunk,
           provider,
-          isStream: true,
+          isStream: true
         })) as OpenAIResponse;
-        yield response;
       }
     }
   }
