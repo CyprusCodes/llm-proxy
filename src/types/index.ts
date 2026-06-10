@@ -209,30 +209,30 @@ export enum AnthropicSupportedLLMs {
 export enum BedrockAnthropicSupportedLLMs {
 
   // Claude 4 Opus Family
-  CLAUDE_4_1 = "anthropic.claude-opus-4-1-20250805-v1:0",
-  CLAUDE_4_5 = "anthropic.claude-opus-4-5-20251101-v1:0",
-  CLAUDE_4_6 = "anthropic.claude-opus-4-6-v1",
-  CLAUDE_4_7 = "anthropic.claude-opus-4-7",
-  CLAUDE_4_8 = "anthropic.claude-opus-4-8",
+  CLAUDE_4_5_EU = "eu.anthropic.claude-opus-4-5-20251101-v1:0",
+  CLAUDE_4_5_GLOBAL = "global.anthropic.claude-opus-4-5-20251101-v1:0",
+  CLAUDE_4_6_EU = "eu.anthropic.claude-opus-4-6-v1",
+  CLAUDE_4_6_GLOBAL = "global.anthropic.claude-opus-4-6-v1",
+  CLAUDE_4_7_EU = "eu.anthropic.claude-opus-4-7",
+  CLAUDE_4_7_GLOBAL = "global.anthropic.claude-opus-4-7",
+  CLAUDE_4_8_EU = "eu.anthropic.claude-opus-4-8",
+  CLAUDE_4_8_GLOBAL = "global.anthropic.claude-opus-4-8",
 
   // Claude 4 Sonnet Family
-  CLAUDE_SONNET_4 = "anthropic.claude-sonnet-4-20250514-v1:0",
-  CLAUDE_SONNET_4_5 = "anthropic.claude-sonnet-4-5-20250929-v1:0",
-  CLAUDE_SONNET_4_6 = "anthropic.claude-sonnet-4-6",
-
-  
+  CLAUDE_SONNET_4_5_EU = "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
+  CLAUDE_SONNET_4_5_GLOBAL = "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+  CLAUDE_SONNET_4_6_EU = "eu.anthropic.claude-sonnet-4-6",
+  CLAUDE_SONNET_4_6_GLOBAL = "global.anthropic.claude-sonnet-4-6",
 
   // Claude HAIKU Family
   CLAUDE_3_HAIKU = "anthropic.claude-3-haiku-20240307-v1:0",
   CLAUDE_3_5_HAIKU = "anthropic.claude-3-5-haiku-20241022-v1:0",
-  CLAUDE_4_5_HAIKU = "anthropic.claude-haiku-4-5-20251001-v1:0",
-
-  // Claude Mythos Family
-  CLAUDE_5_MYTHOS = "anthropic.claude-mythos-5",
-  CLAUDE_MYTHOS_PREVIEW = "anthropic.claude-mythos-preview",
+  CLAUDE_4_5_HAIKU_EU = "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+  CLAUDE_4_5_HAIKU_GLOBAL = "global.anthropic.claude-haiku-4-5-20251001-v1:0",
 
   // Claude Fable Family
-  CLAUDE_5_FABLE = "anthropic.claude-fable-5",
+  CLAUDE_FABLE_5_EU = "eu.anthropic.claude-fable-5",
+  CLAUDE_FABLE_5_GLOBAL = "global.anthropic.claude-fable-5",
 }
 
 export enum BedrockAnthropicContentType {
