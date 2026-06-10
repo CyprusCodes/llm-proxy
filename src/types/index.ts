@@ -207,26 +207,32 @@ export enum AnthropicSupportedLLMs {
 
 // https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html
 export enum BedrockAnthropicSupportedLLMs {
-  // Claude 3 Family
-  CLAUDE_3_OPUS = "anthropic.claude-3-opus-20240229-v1:0",
-  CLAUDE_3_SONNET = "anthropic.claude-3-sonnet-20240229-v1:0",
+
+  // Claude 4 Opus Family
+  CLAUDE_4_1 = "anthropic.claude-opus-4-1-20250805-v1:0",
+  CLAUDE_4_5 = "anthropic.claude-opus-4-5-20251101-v1:0",
+  CLAUDE_4_6 = "anthropic.claude-opus-4-6-v1",
+  CLAUDE_4_7 = "anthropic.claude-opus-4-7",
+  CLAUDE_4_8 = "anthropic.claude-opus-4-8",
+
+  // Claude 4 Sonnet Family
+  CLAUDE_SONNET_4 = "anthropic.claude-sonnet-4-20250514-v1:0",
+  CLAUDE_SONNET_4_5 = "anthropic.claude-sonnet-4-5-20250929-v1:0",
+  CLAUDE_SONNET_4_6 = "anthropic.claude-sonnet-4-6",
+
+  
+
+  // Claude HAIKU Family
   CLAUDE_3_HAIKU = "anthropic.claude-3-haiku-20240307-v1:0",
-
-  // Claude 3.5 Family
-  CLAUDE_3_5_SONNET_V1 = "anthropic.claude-3-5-sonnet-20240620-v1:0",
-  CLAUDE_3_5_SONNET_V2 = "anthropic.claude-3-5-sonnet-20241022-v2:0",
   CLAUDE_3_5_HAIKU = "anthropic.claude-3-5-haiku-20241022-v1:0",
+  CLAUDE_4_5_HAIKU = "anthropic.claude-haiku-4-5-20251001-v1:0",
 
-  // Claude 2 Family
-  CLAUDE_V2_1 = "anthropic.claude-v2:1",
-  CLAUDE_V2 = "anthropic.claude-v2",
-  CLAUDE_INSTANT_V1 = "anthropic.claude-instant-v1",
+  // Claude Mythos Family
+  CLAUDE_5_MYTHOS = "anthropic.claude-mythos-5",
+  CLAUDE_MYTHOS_PREVIEW = "anthropic.claude-mythos-preview",
 
-  // US Region Specific
-  US_CLAUDE_3_HAIKU = "us.anthropic.claude-3-haiku-20240307-v1:0",
-  US_CLAUDE_3_5_HAIKU = "us.anthropic.claude-3-5-haiku-20241022-v1:0",
-  US_CLAUDE_3_5_SONNET = "us.anthropic.claude-3-5-sonnet-20240620-v1:0",
-  US_CALUDE_3_5_SONNET_V2 = "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+  // Claude Fable Family
+  CLAUDE_5_FABLE = "anthropic.claude-fable-5",
 }
 
 export enum BedrockAnthropicContentType {
