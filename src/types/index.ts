@@ -225,8 +225,6 @@ export enum BedrockAnthropicSupportedLLMs {
   CLAUDE_SONNET_4_6_GLOBAL = "global.anthropic.claude-sonnet-4-6",
 
   // Claude HAIKU Family
-  CLAUDE_3_HAIKU = "anthropic.claude-3-haiku-20240307-v1:0",
-  CLAUDE_3_5_HAIKU = "anthropic.claude-3-5-haiku-20241022-v1:0",
   CLAUDE_4_5_HAIKU_EU = "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
   CLAUDE_4_5_HAIKU_GLOBAL = "global.anthropic.claude-haiku-4-5-20251001-v1:0",
 
