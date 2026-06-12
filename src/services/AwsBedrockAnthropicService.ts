@@ -28,13 +28,11 @@ export default class AwsBedrockAnthropicService implements ClientService {
     messages: Messages;
     model?: string;
     max_tokens?: number;
-    temperature?: number;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tools?: any; // TODO: Define the correct type
     systemPrompt?: string;
   }): Promise<BedrockAnthropicResponse> {
-    const { messages, model, max_tokens, temperature, systemPrompt, tools } =
-      params;
+    const { messages, model, max_tokens, systemPrompt, tools } = params;
 
     if (!model) {
       return Promise.reject(
@@ -44,8 +42,7 @@ export default class AwsBedrockAnthropicService implements ClientService {
 
     const body = JSON.stringify({
       anthropic_version: "bedrock-2023-05-31",
-      max_tokens,
-      temperature,
+      max_tokens: max_tokens || 8192,
       messages,
       system: systemPrompt,
       ...(tools && Array.isArray(tools) && tools.length ? { tools } : {}),
@@ -67,13 +64,11 @@ export default class AwsBedrockAnthropicService implements ClientService {
     messages: Messages;
     model?: string;
     max_tokens?: number;
-    temperature?: number;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tools?: any; // TODO: Define the correct type
     systemPrompt?: string;
   }): AsyncGenerator<BedrockAnthropicParsedChunk, void, unknown> {
-    const { messages, model, max_tokens, temperature, tools, systemPrompt } =
-      params;
+    const { messages, model, max_tokens, tools, systemPrompt } = params;
 
     if (!model) {
       return Promise.reject(
@@ -89,8 +84,7 @@ export default class AwsBedrockAnthropicService implements ClientService {
 
     const body = JSON.stringify({
       anthropic_version: "bedrock-2023-05-31",
-      max_tokens,
-      temperature,
+      max_tokens: max_tokens || 8192,
       messages,
       system: systemPrompt,
       ...(validatedTools &&
