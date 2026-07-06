@@ -76,6 +76,7 @@ export default class AnthropicService implements ClientService {
     temperature?: number;
     tools?: any;
     systemPrompt?: string;
+    toolChoice?: any;
   }): Promise<BedrockAnthropicResponse> {
     const {
       messages,
@@ -83,7 +84,8 @@ export default class AnthropicService implements ClientService {
       max_tokens,
       temperature,
       systemPrompt,
-      tools
+      tools,
+      toolChoice
     } = params;
 
     if (!model) {
@@ -95,11 +97,12 @@ export default class AnthropicService implements ClientService {
 
     const createParams: Anthropic.MessageCreateParamsNonStreaming = {
       model,
-      max_tokens: max_tokens ?? 1024,
+      max_tokens: max_tokens ?? 8192,
       temperature: temperature ?? 0,
       system: systemPrompt ?? "",
       messages: messages as Anthropic.MessageParam[],
-      ...(hasTools ? { tools: validatedTools } : {})
+      ...(hasTools ? { tools: validatedTools } : {}),
+      ...(hasTools && toolChoice ? { tool_choice: toolChoice } : {})
     };
 
     const response = await this.client.messages.create(createParams);
@@ -113,6 +116,7 @@ export default class AnthropicService implements ClientService {
     temperature?: number;
     tools?: any;
     systemPrompt?: string;
+    toolChoice?: any;
   }): AsyncGenerator<BedrockAnthropicParsedChunk, void, unknown> {
     const {
       messages,
@@ -120,7 +124,8 @@ export default class AnthropicService implements ClientService {
       max_tokens,
       temperature,
       tools,
-      systemPrompt
+      systemPrompt,
+      toolChoice
     } = params;
 
     if (!model) {
@@ -132,12 +137,13 @@ export default class AnthropicService implements ClientService {
 
     const createParams: Anthropic.MessageCreateParamsStreaming = {
       model,
-      max_tokens: max_tokens ?? 1024,
+      max_tokens: max_tokens ?? 8192,
       temperature: temperature ?? 0,
       system: systemPrompt ?? "",
       messages: messages as Anthropic.MessageParam[],
       stream: true,
-      ...(hasTools ? { tools: validatedTools } : {})
+      ...(hasTools ? { tools: validatedTools } : {}),
+      ...(hasTools && toolChoice ? { tool_choice: toolChoice } : {})
     };
 
     const stream = await this.client.messages.create(createParams);

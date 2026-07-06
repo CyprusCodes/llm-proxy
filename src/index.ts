@@ -7,8 +7,10 @@ import InputFormatAdapter from "./middleware/InputFormatAdapter";
 import OutputFormatAdapter from "./middleware/OutputFormatAdapter";
 import AwsBedrockLlama3Service from "./services/AwsBedrockLlama3Service";
 import OpenAICompatibleService from "./services/OpenAICompatibleService";
+import { responseContainsFuturePromise } from "./utils/futurePromise";
 
 export { llmAsJudge } from "./utils/llmAsJudge";
+export { responseContainsFuturePromise } from "./utils/futurePromise";
 
 interface Credentials {
   apiKey?: string;
@@ -169,6 +171,52 @@ function reconstructAnthropicResponse(chunks: any[]): any {
   };
 }
 
+/**
+ * Provider-native value that forces the model to call a tool. Used to recover
+ * when the model promises an action ("Let me grab that data for you") but
+ * ends its turn without emitting a tool call.
+ */
+function forcedToolChoiceForProvider(provider: Providers): any {
+  return provider === Providers.ANTHROPIC ||
+    provider === Providers.ANTHROPIC_BEDROCK
+    ? { type: "any" }
+    : "required";
+}
+
+function providerSupportsForcedToolChoice(provider: Providers): boolean {
+  // Llama on Bedrock has no native tool_choice support in this proxy's path
+  return provider !== Providers.LLAMA_3_1_BEDROCK;
+}
+
+function responseHasToolCall(response: any): boolean {
+  return Boolean(
+    response?.choices?.some(
+      (choice: any) =>
+        choice?.message?.function_call ||
+        (Array.isArray(choice?.message?.tool_calls) &&
+          choice.message.tool_calls.length > 0)
+    )
+  );
+}
+
+function extractResponseText(response: any): string {
+  return (response?.choices || [])
+    .map((choice: any) =>
+      typeof choice?.message?.content === "string"
+        ? choice.message.content
+        : ""
+    )
+    .join(" ");
+}
+
+function responseIsTerminalStop(response: any): boolean {
+  return Boolean(
+    response?.choices?.some(
+      (choice: any) => choice?.finish_reason === "stop"
+    )
+  );
+}
+
 function anthropicToolCallToStreamChunk(
   completeResponse: any,
   toolUseBlock: any
@@ -194,7 +242,7 @@ function anthropicToolCallToStreamChunk(
           }
         },
         logprobs: null,
-        finish_reason: "stop"
+        finish_reason: "tool_calls"
       }
     ],
     usage: {
@@ -233,30 +281,65 @@ export async function generateLLMResponse(
     model
   );
 
-  const response = await service.generateCompletion({
+  // OpenAI responses are already in the right format
+  const isOpenAIFormat =
+    provider === Providers.OPENAI ||
+    provider === Providers.OPENAI_COMPATIBLE_PROVIDER;
+
+  const requestParams = {
     messages: adaptedMessages as any,
     model,
     ...(typeof max_tokens === "number" ? { max_tokens } : {}),
     temperature: temperature || 0,
     tools: functions,
     systemPrompt: systemPrompt || ""
-  });
+  };
 
-  // OpenAI responses are already in the right format
-  const isOpenAIFormat =
-    provider === Providers.OPENAI ||
-    provider === Providers.OPENAI_COMPATIBLE_PROVIDER;
+  const adaptResponse = async (response: any): Promise<OpenAIResponse> => {
+    if (isOpenAIFormat) {
+      return response as OpenAIResponse;
+    }
+    return (await OutputFormatAdapter.adaptResponse({
+      response,
+      provider,
+      isStream: false
+    })) as OpenAIResponse;
+  };
 
-  if (isOpenAIFormat) {
-    return response as OpenAIResponse;
+  const response = await service.generateCompletion(requestParams);
+  const adaptedResponse = await adaptResponse(response);
+
+  // Future-promise guard: the model said it was about to do something
+  // ("Let me grab that data for you") but ended its turn without calling a
+  // tool. Re-run the request once with tool choice forced so the promised
+  // action actually happens.
+  const hasTools = Array.isArray(functions)
+    ? functions.length > 0
+    : Boolean(functions);
+
+  const shouldForceToolCall =
+    hasTools &&
+    providerSupportsForcedToolChoice(provider) &&
+    responseIsTerminalStop(adaptedResponse) &&
+    !responseHasToolCall(adaptedResponse) &&
+    responseContainsFuturePromise(extractResponseText(adaptedResponse));
+
+  if (shouldForceToolCall) {
+    try {
+      const forcedResponse = await service.generateCompletion({
+        ...requestParams,
+        toolChoice: forcedToolChoiceForProvider(provider)
+      });
+      const adaptedForcedResponse = await adaptResponse(forcedResponse);
+      if (responseHasToolCall(adaptedForcedResponse)) {
+        return adaptedForcedResponse;
+      }
+    } catch {
+      // Forced retry failed — fall back to the original response
+    }
   }
 
-  const adaptedResponse = await OutputFormatAdapter.adaptResponse({
-    response,
-    provider,
-    isStream: false
-  });
-  return adaptedResponse as OpenAIResponse;
+  return adaptedResponse;
 }
 
 /** Streaming LLM completion. Returns an async generator of OpenAI-format chunks. */
@@ -284,14 +367,20 @@ export async function generateLLMStreamResponse(
     model
   );
 
-  const stream = service.generateStreamCompletion({
+  const requestParams = {
     messages: adaptedMessages as any,
     model,
     ...(typeof max_tokens === "number" ? { max_tokens } : {}),
     temperature: temperature || 0,
     tools: functions,
     systemPrompt: systemPrompt || ""
-  });
+  };
+
+  const stream = service.generateStreamCompletion(requestParams);
+
+  const hasTools = Array.isArray(functions)
+    ? functions.length > 0
+    : Boolean(functions);
 
   async function* streamGenerator(): AsyncGenerator<OpenAIResponse> {
     // OpenAI / OpenAI-compatible — pass through as-is
@@ -300,8 +389,58 @@ export async function generateLLMStreamResponse(
       provider === Providers.OPENAI_COMPATIBLE_PROVIDER;
 
     if (isOpenAIFormat) {
+      let accumulatedText = "";
+      let sawToolCall = false;
+      let finishReason: string | null = null;
+
       for await (const chunk of stream) {
+        const choice = (chunk as any).choices?.[0];
+        if (choice?.delta?.content) {
+          accumulatedText += choice.delta.content;
+        }
+        if (
+          choice?.delta?.function_call ||
+          (Array.isArray(choice?.delta?.tool_calls) &&
+            choice.delta.tool_calls.length > 0)
+        ) {
+          sawToolCall = true;
+        }
+        if (choice?.finish_reason) {
+          finishReason = choice.finish_reason;
+        }
         yield chunk as OpenAIResponse;
+      }
+
+      // Future-promise guard: the model announced an action but ended its
+      // turn without a tool call. Continue the stream with a forced-tool
+      // request so the promised action actually happens.
+      const shouldForceToolCall =
+        hasTools &&
+        !sawToolCall &&
+        finishReason === "stop" &&
+        responseContainsFuturePromise(accumulatedText);
+
+      if (shouldForceToolCall) {
+        try {
+          const forcedStream = service.generateStreamCompletion({
+            ...requestParams,
+            toolChoice: forcedToolChoiceForProvider(provider)
+          });
+          for await (const chunk of forcedStream) {
+            const choice = (chunk as any).choices?.[0];
+            // Skip pure-text chunks — the promise text was already streamed;
+            // only the tool call (and usage/finish chunks) should follow.
+            const isTextOnlyChunk =
+              Boolean(choice?.delta?.content) &&
+              !choice?.delta?.function_call &&
+              !choice?.delta?.tool_calls;
+            if (!isTextOnlyChunk) {
+              yield chunk as OpenAIResponse;
+            }
+          }
+        } catch {
+          // Forced retry failed — the original response was already streamed
+        }
       }
       return;
     }
@@ -323,22 +462,73 @@ export async function generateLLMStreamResponse(
         }
       }
 
+      const completeResponse = reconstructAnthropicResponse(allChunks);
+
       if (hasToolUse) {
-        const completeResponse = reconstructAnthropicResponse(allChunks);
         const toolUseBlock = completeResponse.content.find(
           (block: any) => block.type === "tool_use"
         );
         if (toolUseBlock) {
           yield anthropicToolCallToStreamChunk(completeResponse, toolUseBlock);
         }
-      } else {
-        // Text-only: yield each chunk through the streaming adapter
-        for (const chunk of allChunks) {
-          yield (await OutputFormatAdapter.adaptResponse({
-            response: chunk,
-            provider,
-            isStream: true
-          })) as OpenAIResponse;
+        return;
+      }
+
+      // Text-only: yield each chunk through the streaming adapter, carrying
+      // the real stop_reason so truncation surfaces as finish_reason "length"
+      const stopReason = completeResponse.stop_reason || "end_turn";
+
+      for (const chunk of allChunks) {
+        yield (await OutputFormatAdapter.adaptResponse({
+          response: chunk,
+          provider,
+          isStream: true,
+          stopReason
+        })) as OpenAIResponse;
+      }
+
+      // Future-promise guard (see OpenAI branch above)
+      const fullText = completeResponse.content
+        .filter((block: any) => block.type === "text")
+        .map((block: any) => block.text || "")
+        .join("");
+
+      const shouldForceToolCall =
+        hasTools &&
+        stopReason === "end_turn" &&
+        responseContainsFuturePromise(fullText);
+
+      if (shouldForceToolCall) {
+        try {
+          const forcedChunks: any[] = [];
+          let forcedHasToolUse = false;
+          const forcedStream = service.generateStreamCompletion({
+            ...requestParams,
+            toolChoice: forcedToolChoiceForProvider(provider)
+          });
+          for await (const chunk of forcedStream) {
+            forcedChunks.push(chunk);
+            if (
+              chunk.type === "content_block_start" &&
+              chunk.content_block?.type === "tool_use"
+            ) {
+              forcedHasToolUse = true;
+            }
+          }
+          if (forcedHasToolUse) {
+            const forcedResponse = reconstructAnthropicResponse(forcedChunks);
+            const toolUseBlock = forcedResponse.content.find(
+              (block: any) => block.type === "tool_use"
+            );
+            if (toolUseBlock) {
+              yield anthropicToolCallToStreamChunk(
+                forcedResponse,
+                toolUseBlock
+              );
+            }
+          }
+        } catch {
+          // Forced retry failed — the original response was already streamed
         }
       }
       return;

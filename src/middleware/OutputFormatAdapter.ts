@@ -15,16 +15,46 @@ export default class OutputFormatAdapter {
   // Cached model name from message_start during streaming
   private static model: string | undefined;
 
+  /**
+   * Maps Anthropic stop_reason values to OpenAI finish_reason values.
+   * Getting this right matters: consumers rely on "length" to trigger
+   * continuation when a response was truncated by max_tokens. Reporting a
+   * truncated response as "stop" makes the agent look like it finished and
+   * silently stopped mid-task.
+   */
+  static mapStopReasonToFinishReason(
+    stopReason: string | null | undefined
+  ): string {
+    switch (stopReason) {
+      case "max_tokens":
+      case "model_context_window_exceeded":
+        return "length";
+      case "tool_use":
+        return "tool_calls";
+      case "refusal":
+        return "content_filter";
+      case "end_turn":
+      case "stop_sequence":
+      case "pause_turn":
+      default:
+        return "stop";
+    }
+  }
+
   static async adaptResponse({
     response,
     provider,
     isStream,
-    isFunctionCall
+    isFunctionCall,
+    stopReason
   }: {
     response: any;
     provider: Providers;
     isStream: boolean;
     isFunctionCall?: boolean;
+    // Anthropic stop_reason observed on the stream (from message_delta) —
+    // used to emit the correct finish_reason on the final chunk.
+    stopReason?: string;
   }): Promise<any> {
     if (!response) {
       throw new Error("Response object is null or undefined");
@@ -40,7 +70,7 @@ export default class OutputFormatAdapter {
           if (!isStream) {
             return this.adaptCompleteResponse(response);
           }
-          return this.adaptStreamingChunk(response, provider);
+          return this.adaptStreamingChunk(response, provider, stopReason);
 
         case Providers.LLAMA_3_1_BEDROCK: {
           if (!isStream && !isFunctionCall) {
@@ -103,7 +133,9 @@ export default class OutputFormatAdapter {
               }
             },
             logprobs: null,
-            finish_reason: response.stop_reason || null
+            finish_reason: this.mapStopReasonToFinishReason(
+              response.stop_reason
+            )
           }
         ],
         usage,
@@ -124,7 +156,7 @@ export default class OutputFormatAdapter {
             content: this.extractContent(contentBlock)
           },
           logprobs: null,
-          finish_reason: response.stop_reason || null
+          finish_reason: this.mapStopReasonToFinishReason(response.stop_reason)
         })
       ),
       usage,
@@ -132,7 +164,11 @@ export default class OutputFormatAdapter {
     };
   }
 
-  private static adaptStreamingChunk(chunk: any, provider?: Providers): any {
+  private static adaptStreamingChunk(
+    chunk: any,
+    provider?: Providers,
+    stopReason?: string
+  ): any {
     const bedrockMetrics = chunk["amazon-bedrock-invocationMetrics"];
     const anthropicUsage =
       provider === Providers.ANTHROPIC && chunk.usage
@@ -163,7 +199,9 @@ export default class OutputFormatAdapter {
           index: 0,
           delta: { content },
           logprobs: null,
-          finish_reason: isMessageEnd ? "stop" : null
+          finish_reason: isMessageEnd
+            ? this.mapStopReasonToFinishReason(stopReason)
+            : null
         }
       ],
       usage: isMessageEnd
