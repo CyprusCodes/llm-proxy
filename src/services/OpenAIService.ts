@@ -16,7 +16,8 @@ export default class OpenAIService implements ClientService {
     temperature,
     tools,
     reasoning_effort,
-    verbosity
+    verbosity,
+    toolChoice
   }: {
     messages: OpenAIMessages;
     model: string;
@@ -27,6 +28,8 @@ export default class OpenAIService implements ClientService {
     tools?: any;
     reasoning_effort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
     verbosity?: "low" | "medium" | "high";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    toolChoice?: any;
   }): Promise<OpenAIResponse> {
     if (!model) {
       return Promise.reject(
@@ -62,6 +65,11 @@ export default class OpenAIService implements ClientService {
         requestBody.tools = tools;
       }
 
+      // Force tool usage when requested (e.g. "required")
+      if (tools && toolChoice) {
+        requestBody.tool_choice = toolChoice;
+      }
+
       // Add optional reasoning parameter for reasoning models
       if (reasoning_effort) {
         requestBody.reasoning_effort = reasoning_effort;
@@ -87,7 +95,8 @@ export default class OpenAIService implements ClientService {
     temperature,
     tools,
     reasoning_effort,
-    verbosity
+    verbosity,
+    toolChoice
   }: {
     messages: OpenAIMessages;
     model: string;
@@ -98,6 +107,8 @@ export default class OpenAIService implements ClientService {
     tools?: any;
     reasoning_effort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
     verbosity?: "low" | "medium" | "high";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    toolChoice?: any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }): AsyncGenerator<any, void, unknown> {
     if (!model) {
@@ -136,6 +147,11 @@ export default class OpenAIService implements ClientService {
       // Add tools if provided (modern API, replaces deprecated functions)
       if (tools) {
         requestBody.tools = tools;
+      }
+
+      // Force tool usage when requested (e.g. "required")
+      if (tools && toolChoice) {
+        requestBody.tool_choice = toolChoice;
       }
 
       // Add optional reasoning parameter for reasoning models

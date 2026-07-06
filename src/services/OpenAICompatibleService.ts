@@ -188,6 +188,7 @@ export default class OpenAICompatibleService implements ClientService {
     max_tokens,
     temperature,
     tools,
+    toolChoice,
   }: {
     messages: OpenAIMessages;
     model: string;
@@ -195,6 +196,7 @@ export default class OpenAICompatibleService implements ClientService {
     temperature: number;
     systemPrompt?: string;
     tools?: any;
+    toolChoice?: any;
   }): Promise<OpenAIResponse> {
     if (!model) {
       return Promise.reject(
@@ -212,6 +214,7 @@ export default class OpenAICompatibleService implements ClientService {
         ...(typeof max_tokens === "number" ? { max_tokens } : {}),
         temperature,
         ...(normalizedTools && { tools: normalizedTools }),
+        ...(normalizedTools && toolChoice ? { tool_choice: toolChoice } : {}),
       });
       return response as OpenAIResponse;
     } catch (error) {
@@ -225,6 +228,7 @@ export default class OpenAICompatibleService implements ClientService {
     max_tokens,
     temperature,
     tools,
+    toolChoice,
   }: {
     messages: OpenAIMessages;
     model: string;
@@ -232,6 +236,7 @@ export default class OpenAICompatibleService implements ClientService {
     temperature: number;
     systemPrompt?: string;
     tools?: any;
+    toolChoice?: any;
   }): AsyncGenerator<any, void, unknown> {
     if (!model) {
       throw new Error("Model ID is required for OpenAIService.");
@@ -245,6 +250,7 @@ export default class OpenAICompatibleService implements ClientService {
       ...(typeof max_tokens === "number" ? { max_tokens } : {}),
       temperature,
       ...(normalizedTools && { tools: normalizedTools }),
+      ...(normalizedTools && toolChoice ? { tool_choice: toolChoice } : {}),
       stream: true,
       stream_options: {
         include_usage: true,
