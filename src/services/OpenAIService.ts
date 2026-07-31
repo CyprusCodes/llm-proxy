@@ -2,6 +2,22 @@ import OpenAI from "openai";
 import { OpenAIMessages, OpenAIResponse } from "../types";
 import { ClientService } from "./ClientService";
 
+// Some models reject tools + non-"none" reasoning_effort; retried with "none".
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isUnsupportedReasoningEffortError(error: any): boolean {
+  return error?.status === 400 && error?.param === "reasoning_effort";
+}
+
+// Some models reject a custom temperature; retried with it omitted.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isUnsupportedTemperatureError(error: any): boolean {
+  return (
+    error?.status === 400 &&
+    error?.param === "temperature" &&
+    error?.code === "unsupported_value"
+  );
+}
+
 export default class OpenAIService implements ClientService {
   private openai: OpenAI;
 
@@ -80,8 +96,28 @@ export default class OpenAIService implements ClientService {
         requestBody.verbosity = verbosity;
       }
 
-      const response = await this.openai.chat.completions.create(requestBody);
-      return response as OpenAIResponse;
+      try {
+        const response = await this.openai.chat.completions.create(
+          requestBody
+        );
+        return response as OpenAIResponse;
+      } catch (error) {
+        if (!reasoning_effort && isUnsupportedReasoningEffortError(error)) {
+          const response = await this.openai.chat.completions.create({
+            ...requestBody,
+            reasoning_effort: "none"
+          });
+          return response as OpenAIResponse;
+        }
+        if (isUnsupportedTemperatureError(error)) {
+          const { temperature: _temperature, ...retryBody } = requestBody;
+          const response = await this.openai.chat.completions.create(
+            retryBody
+          );
+          return response as OpenAIResponse;
+        }
+        throw error;
+      }
     } catch (error) {
       return Promise.reject(error);
     }
@@ -165,9 +201,26 @@ export default class OpenAIService implements ClientService {
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const stream = await (this.openai.chat.completions.create(
-        requestBody
-      ) as any);
+      let stream: any;
+      try {
+        stream = await (this.openai.chat.completions.create(
+          requestBody
+        ) as any);
+      } catch (error) {
+        if (!reasoning_effort && isUnsupportedReasoningEffortError(error)) {
+          stream = await (this.openai.chat.completions.create({
+            ...requestBody,
+            reasoning_effort: "none"
+          }) as any);
+        } else if (isUnsupportedTemperatureError(error)) {
+          const { temperature: _temperature, ...retryBody } = requestBody;
+          stream = await (this.openai.chat.completions.create(
+            retryBody
+          ) as any);
+        } else {
+          throw error;
+        }
+      }
 
       for await (const chunk of stream) {
         yield chunk;
