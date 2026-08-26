@@ -18,6 +18,30 @@ function isUnsupportedTemperatureError(error: any): boolean {
   );
 }
 
+// gpt-5.6 (sol, luna, terra, ...) only accepts default temperature (1) and
+// rejects reasoning_effort + tools together
+function isGpt56ReasoningFamily(model: string): boolean {
+  return model.startsWith("gpt-5.6-");
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function avoidKnownUnsupportedParams(
+  requestBody: any,
+  model: string,
+  tools: unknown,
+  reasoning_effort?: string
+): void {
+  if (!isGpt56ReasoningFamily(model)) {
+    return;
+  }
+  if (requestBody.temperature !== 1) {
+    delete requestBody.temperature;
+  }
+  if (tools && !reasoning_effort) {
+    requestBody.reasoning_effort = "none";
+  }
+}
+
 export default class OpenAIService implements ClientService {
   private openai: OpenAI;
 
@@ -95,6 +119,8 @@ export default class OpenAIService implements ClientService {
       if (verbosity) {
         requestBody.verbosity = verbosity;
       }
+
+      avoidKnownUnsupportedParams(requestBody, model, tools, reasoning_effort);
 
       try {
         const response = await this.openai.chat.completions.create(
@@ -199,6 +225,8 @@ export default class OpenAIService implements ClientService {
       if (verbosity) {
         requestBody.verbosity = verbosity;
       }
+
+      avoidKnownUnsupportedParams(requestBody, model, tools, reasoning_effort);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let stream: any;
