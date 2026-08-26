@@ -1,22 +1,11 @@
 import OpenAI from "openai";
 import { OpenAIMessages, OpenAIResponse } from "../types";
 import { ClientService } from "./ClientService";
-
-// Some models reject tools + non-"none" reasoning_effort; retried with "none".
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function isUnsupportedReasoningEffortError(error: any): boolean {
-  return error?.status === 400 && error?.param === "reasoning_effort";
-}
-
-// Some models reject a custom temperature; retried with it omitted.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function isUnsupportedTemperatureError(error: any): boolean {
-  return (
-    error?.status === 400 &&
-    error?.param === "temperature" &&
-    error?.code === "unsupported_value"
-  );
-}
+import {
+  avoidKnownUnsupportedParams,
+  isUnsupportedReasoningEffortError,
+  isUnsupportedTemperatureError
+} from "../utils/servicesUtils/openAIUnsupportedParams";
 
 export default class OpenAIService implements ClientService {
   private openai: OpenAI;
@@ -95,6 +84,8 @@ export default class OpenAIService implements ClientService {
       if (verbosity) {
         requestBody.verbosity = verbosity;
       }
+
+      avoidKnownUnsupportedParams(requestBody, model, tools, reasoning_effort);
 
       try {
         const response = await this.openai.chat.completions.create(
@@ -199,6 +190,8 @@ export default class OpenAIService implements ClientService {
       if (verbosity) {
         requestBody.verbosity = verbosity;
       }
+
+      avoidKnownUnsupportedParams(requestBody, model, tools, reasoning_effort);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let stream: any;
