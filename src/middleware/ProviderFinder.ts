@@ -37,6 +37,10 @@ export default class ProviderFinder {
     ) {
       return Providers.LLAMA_3_1_BEDROCK;
     }
+    const geminiVersion = model.match(/^gemini-(\d+)\./);
+    if (geminiVersion && geminiVersion[1] && parseInt(geminiVersion[1], 10) >= 3) {
+      return Providers.GEMINI;
+    }
     if (baseUrl) {
       return Providers.OPENAI_COMPATIBLE_PROVIDER;
     }

@@ -7,6 +7,7 @@ import InputFormatAdapter from "./middleware/InputFormatAdapter";
 import OutputFormatAdapter from "./middleware/OutputFormatAdapter";
 import AwsBedrockLlama3Service from "./services/AwsBedrockLlama3Service";
 import OpenAICompatibleService from "./services/OpenAICompatibleService";
+import GeminiService from "./services/GeminiService";
 import { responseContainsFuturePromise } from "./utils/futurePromise";
 
 export { llmAsJudge } from "./utils/llmAsJudge";
@@ -35,7 +36,8 @@ type ServiceInstance =
   | AnthropicService
   | AwsBedrockAnthropicService
   | AwsBedrockLlama3Service
-  | OpenAICompatibleService;
+  | OpenAICompatibleService
+  | GeminiService;
 
 function createService(
   provider: Providers,
@@ -84,6 +86,18 @@ function createService(
         );
       }
       return new OpenAICompatibleService(
+        config.openAICompatibleProviderKey,
+        config.baseUrl
+      );
+    }
+    case Providers.GEMINI: {
+      const config = credentials.openAICompatibleProviderConfig;
+      if (!config?.openAICompatibleProviderKey || !config?.baseUrl) {
+        throw new Error(
+          "Gemini API key and base URL are required."
+        );
+      }
+      return new GeminiService(
         config.openAICompatibleProviderKey,
         config.baseUrl
       );
@@ -284,7 +298,8 @@ export async function generateLLMResponse(
   // OpenAI responses are already in the right format
   const isOpenAIFormat =
     provider === Providers.OPENAI ||
-    provider === Providers.OPENAI_COMPATIBLE_PROVIDER;
+    provider === Providers.OPENAI_COMPATIBLE_PROVIDER ||
+    provider === Providers.GEMINI;
 
   const requestParams = {
     messages: adaptedMessages as any,

@@ -5,6 +5,7 @@ export enum Providers {
   ANTHROPIC_BEDROCK = "AnthropicBedrock",
   LLAMA_3_1_BEDROCK = "Llama3.1",
   OPENAI_COMPATIBLE_PROVIDER = "OpenAICompatibleProvider",
+  GEMINI = "Gemini",
 }
 
 export type OpenAIMessagesRoles =
