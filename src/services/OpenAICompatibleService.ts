@@ -193,7 +193,7 @@ export default class OpenAICompatibleService implements ClientService {
     messages: OpenAIMessages;
     model: string;
     max_tokens?: number;
-    temperature: number;
+    temperature?: number;
     systemPrompt?: string;
     tools?: any;
     toolChoice?: any;
@@ -212,7 +212,7 @@ export default class OpenAICompatibleService implements ClientService {
         model,
         messages: reformattedMessages,
         ...(typeof max_tokens === "number" ? { max_tokens } : {}),
-        temperature,
+        ...(typeof temperature === "number" ? { temperature } : {}),
         ...(normalizedTools && { tools: normalizedTools }),
         ...(normalizedTools && toolChoice ? { tool_choice: toolChoice } : {}),
       });
@@ -233,7 +233,7 @@ export default class OpenAICompatibleService implements ClientService {
     messages: OpenAIMessages;
     model: string;
     max_tokens?: number;
-    temperature: number;
+    temperature?: number;
     systemPrompt?: string;
     tools?: any;
     toolChoice?: any;
@@ -248,7 +248,7 @@ export default class OpenAICompatibleService implements ClientService {
       model,
       messages: reformattedMessages,
       ...(typeof max_tokens === "number" ? { max_tokens } : {}),
-      temperature,
+      ...(typeof temperature === "number" ? { temperature } : {}),
       ...(normalizedTools && { tools: normalizedTools }),
       ...(normalizedTools && toolChoice ? { tool_choice: toolChoice } : {}),
       stream: true,
