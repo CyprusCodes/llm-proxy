@@ -6,12 +6,36 @@ import {
   isUnsupportedReasoningEffortError,
   isUnsupportedTemperatureError
 } from "../utils/servicesUtils/openAIUnsupportedParams";
+import {
+  chatRequestToResponsesRequest,
+  responsesStreamToChatChunks,
+  responsesToChatCompletion,
+  usesResponsesApi
+} from "../utils/servicesUtils/openAIResponsesAdapter";
 
 export default class OpenAIService implements ClientService {
   private openai: OpenAI;
 
   constructor(apiKey: string) {
     this.openai = new OpenAI({ apiKey });
+  }
+
+  /**
+   * Sends a Chat Completions-shaped request. GPT-5.x models are routed to the
+   * Responses API and their output is translated back to Chat Completions
+   * format, so callers always receive chat.completion(.chunk) objects.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async send(requestBody: any): Promise<any> {
+    if (!usesResponsesApi(requestBody.model)) {
+      return this.openai.chat.completions.create(requestBody);
+    }
+    const responsesBody = chatRequestToResponsesRequest(requestBody);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result: any = await this.openai.responses.create(responsesBody);
+    return requestBody.stream
+      ? responsesStreamToChatChunks(result)
+      : responsesToChatCompletion(result);
   }
 
   async generateCompletion({
@@ -88,13 +112,11 @@ export default class OpenAIService implements ClientService {
       avoidKnownUnsupportedParams(requestBody, model, tools, reasoning_effort);
 
       try {
-        const response = await this.openai.chat.completions.create(
-          requestBody
-        );
+        const response = await this.send(requestBody);
         return response as OpenAIResponse;
       } catch (error) {
         if (!reasoning_effort && isUnsupportedReasoningEffortError(error)) {
-          const response = await this.openai.chat.completions.create({
+          const response = await this.send({
             ...requestBody,
             reasoning_effort: "none"
           });
@@ -102,9 +124,7 @@ export default class OpenAIService implements ClientService {
         }
         if (isUnsupportedTemperatureError(error)) {
           const { temperature: _temperature, ...retryBody } = requestBody;
-          const response = await this.openai.chat.completions.create(
-            retryBody
-          );
+          const response = await this.send(retryBody);
           return response as OpenAIResponse;
         }
         throw error;
@@ -196,20 +216,16 @@ export default class OpenAIService implements ClientService {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let stream: any;
       try {
-        stream = await (this.openai.chat.completions.create(
-          requestBody
-        ) as any);
+        stream = await this.send(requestBody);
       } catch (error) {
         if (!reasoning_effort && isUnsupportedReasoningEffortError(error)) {
-          stream = await (this.openai.chat.completions.create({
+          stream = await this.send({
             ...requestBody,
             reasoning_effort: "none"
-          }) as any);
+          });
         } else if (isUnsupportedTemperatureError(error)) {
           const { temperature: _temperature, ...retryBody } = requestBody;
-          stream = await (this.openai.chat.completions.create(
-            retryBody
-          ) as any);
+          stream = await this.send(retryBody);
         } else {
           throw error;
         }

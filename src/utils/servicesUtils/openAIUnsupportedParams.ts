@@ -1,7 +1,11 @@
 // Some models reject tools + non-"none" reasoning_effort; retried with "none".
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function isUnsupportedReasoningEffortError(error: any): boolean {
-  return error?.status === 400 && error?.param === "reasoning_effort";
+  // Chat Completions reports "reasoning_effort"; Responses API "reasoning.effort"
+  return (
+    error?.status === 400 &&
+    (error?.param === "reasoning_effort" || error?.param === "reasoning.effort")
+  );
 }
 
 // Some models reject a custom temperature; retried with it omitted.
