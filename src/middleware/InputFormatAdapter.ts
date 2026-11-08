@@ -261,10 +261,16 @@ export default class InputFormatAdapter {
               name: (msg as OpenAIFunctionMessage).name,
             };
           }
+          if (msg.function_call) {
+            return {
+              role: msg.role,
+              content: msg.content ?? null,
+              function_call: msg.function_call,
+            };
+          }
           return {
             role: msg.role,
             content: msg.content ?? "function call",
-            ...(msg.function_call && { function_call: msg.function_call }),
           };
         }) as OpenAIMessages;
 
