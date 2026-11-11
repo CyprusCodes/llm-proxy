@@ -401,7 +401,8 @@ export async function generateLLMStreamResponse(
     // OpenAI / OpenAI-compatible — pass through as-is
     const isOpenAIFormat =
       provider === Providers.OPENAI ||
-      provider === Providers.OPENAI_COMPATIBLE_PROVIDER;
+      provider === Providers.OPENAI_COMPATIBLE_PROVIDER ||
+      provider === Providers.GEMINI;
 
     if (isOpenAIFormat) {
       let accumulatedText = "";
