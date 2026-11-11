@@ -1,4 +1,5 @@
 import InputFormatAdapter from "../middleware/InputFormatAdapter";
+import ProviderFinder from "../middleware/ProviderFinder";
 import { chatRequestToResponsesRequest } from "../utils/servicesUtils/openAIResponsesAdapter";
 import { Providers } from "../types";
 
@@ -51,6 +52,32 @@ describe("InputFormatAdapter OpenAI function call history", () => {
       role: "assistant",
       content: null,
       function_call: { name: "set_item", arguments: '{"key":"file_2015","value":"a"}' }
+    });
+  });
+});
+
+describe("InputFormatAdapter Gemini 3+", () => {
+  const geminiHistory = [
+    ...history.slice(0, 3),
+    { ...history[3], thought_signature: "sig" }
+  ];
+
+  it("adapts gemini-3 messages the same way as OpenAI-compatible providers", () => {
+    const provider = ProviderFinder.getProvider("gemini-3.8-flash", "https://example.com");
+    expect(provider).toBe(Providers.GEMINI);
+
+    const gemini = InputFormatAdapter.adaptMessages(geminiHistory, provider);
+    const compatible = InputFormatAdapter.adaptMessages(
+      geminiHistory,
+      Providers.OPENAI_COMPATIBLE_PROVIDER
+    );
+
+    expect(gemini).toEqual(compatible);
+    expect(gemini.adaptedMessages[3]).toEqual({
+      role: "function",
+      content: "file_2015 saved",
+      thought_signature: "sig",
+      name: "set_item"
     });
   });
 });
