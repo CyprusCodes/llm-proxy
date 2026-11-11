@@ -281,6 +281,7 @@ export default class InputFormatAdapter {
         };
 
       case Providers.OPENAI_COMPATIBLE_PROVIDER:
+      case Providers.GEMINI:
         return {
           // @ts-ignore: Ignore the any type in the msg
           adaptedMessages: messages.map((msg) => {
